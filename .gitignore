@@ -1,0 +1,17 @@
+# Python environment
+venv/
+__pycache__/
+*.py[cod]
+
+# PyInstaller artifacts
+build/
+dist/
+
+# Testing cache
+.pytest_cache/
+
+# Runtime data — entire directory excluded, no exceptions
+data/
+
+# Claude Code local settings
+.claude/settings.local.json
