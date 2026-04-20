@@ -51,6 +51,12 @@ Triggered only by the confirmation keyword. Output one XML prompt block:
         <outputs>[expected deliverables]</outputs>
         <success_criteria>[how to verify the task is complete]</success_criteria>
       </context>
+      <testing_and_debugging>
+        [list the commands or steps to verify the implementation:
+         unit tests (pytest), integration tests, manual CLI/GUI smoke tests,
+         edge cases derived from CLAUDE.md invariants and contracts,
+         and how to confirm no regressions in existing tests]
+      </testing_and_debugging>
       <plan_gate>
         Produce the plan only after I have answered your questions from the EXPLORE phase.
       </plan_gate>
