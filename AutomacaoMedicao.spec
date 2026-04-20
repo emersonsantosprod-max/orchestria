@@ -1,12 +1,16 @@
 # -*- mode: python ; coding: utf-8 -*-
-
+from PyInstaller.utils.hooks import collect_data_files
 
 a = Analysis(
     ['ui/gui.py'],
     pathex=['.'],
     binaries=[],
-    datas=[('data/entrada/distribuicao_contratual_normalizada.xlsx', 'data/entrada')],
-    hiddenimports=['openpyxl', 'et_xmlfile', 'tkinter'],
+    datas=[
+        ('data/entrada/distribuicao_contratual_normalizada.xlsx', 'data/entrada'),
+        ('design/fonts/*.ttf', 'design/fonts'),
+        *collect_data_files('customtkinter'),
+    ],
+    hiddenimports=['openpyxl', 'et_xmlfile', 'tkinter', 'customtkinter'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

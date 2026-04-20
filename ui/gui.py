@@ -1,15 +1,18 @@
 import os
 import sys
+import platform
+import ctypes
 import threading
 import tkinter as tk
+import tkinter.font as tkfont
 from pathlib import Path
-from tkinter import filedialog, scrolledtext
+from tkinter import filedialog
 
-try:
-    import openpyxl  # noqa: F401  (fail-soft: alguns builds empacotam lazy)
-except ImportError:
-    pass
+import customtkinter as ctk
 
+# ---------------------------------------------------------------------------
+# Path setup
+# ---------------------------------------------------------------------------
 
 def get_base_path():
     if getattr(sys, 'frozen', False):
@@ -22,13 +25,40 @@ app_path = os.path.join(base_path, "app")
 if app_path not in sys.path:
     sys.path.append(app_path)
 
+try:
+    import openpyxl  # noqa: F401
+except ImportError:
+    pass
+
 from app.pipeline import processar, salvar_relatorio_inconsistencias
 from app import db
 from app.validar_distribuicao import validar, gerar_relatorio, _salvar_relatorio
-
+from app.validar_horas import (
+    validar as _validar_hr,
+    gerar_relatorio as _gerar_relatorio_hr,
+    _salvar_relatorio as _salvar_relatorio_hr,
+)
 
 # ---------------------------------------------------------------------------
-# Seleção de arquivos
+# Design tokens (Manserv brand)
+# ---------------------------------------------------------------------------
+
+_CHUMBO      = "#232323"
+_CHUMBO_2    = "#111111"
+_LARANJA     = "#ff460a"
+_LARANJA_HV  = "#e2360e"
+_CONTEUDO    = "#ededed"
+_PAINEL      = "#ffffff"
+_TXT_INV     = "#ffffff"
+_TXT_NAV     = "#e5e5e5"
+
+# Column indices — Frequencia sheet (from app/cli/validar_consist.py)
+_COL_DATA    = 0
+_COL_RE      = 1
+_COL_HR_TRAB = 19
+
+# ---------------------------------------------------------------------------
+# Helpers
 # ---------------------------------------------------------------------------
 
 def selecionar_arquivo(titulo):
@@ -38,33 +68,26 @@ def selecionar_arquivo(titulo):
     )
 
 
-# ---------------------------------------------------------------------------
-# Handlers genéricos de fluxo (treinamento e férias compartilham estrutura)
-# ---------------------------------------------------------------------------
+def _todos_botoes():
+    return [botao_lancar, botao_ferias, botao_atestado, botao_validar, botao_validar_hr]
+
 
 def _desabilitar_botoes():
-    botao_lancar.config(state=tk.DISABLED)
-    botao_ferias.config(state=tk.DISABLED)
-    botao_atestado.config(state=tk.DISABLED)
-    botao_validar.config(state=tk.DISABLED)
+    for b in _todos_botoes():
+        b.configure(state="disabled")
 
 
 def _habilitar_botoes():
-    janela.after(0, lambda: botao_lancar.config(state=tk.NORMAL))
-    janela.after(0, lambda: botao_ferias.config(state=tk.NORMAL))
-    janela.after(0, lambda: botao_atestado.config(state=tk.NORMAL))
-    janela.after(0, lambda: botao_validar.config(state=tk.NORMAL))
+    janela.after(0, lambda: [b.configure(state="normal") for b in _todos_botoes()])
 
 
-def _executar_fluxo(titulo_log: str, prompts: list, montar_kwargs):
-    """
-    Fluxo genérico: limpa log, pede arquivos via prompts, executa service.processar.
+# ---------------------------------------------------------------------------
+# Handlers
+# ---------------------------------------------------------------------------
 
-    prompts:  lista de (label, chave_kwargs). Primeiro é sempre a medição.
-    montar_kwargs: função (caminhos_dict) -> kwargs para service.processar.
-    """
+def _executar_fluxo(titulo_log, prompts, montar_kwargs):
     _desabilitar_botoes()
-    area_saida.delete(1.0, tk.END)
+    area_saida.delete("1.0", "end")
 
     caminhos = {}
     for label, chave in prompts:
@@ -147,7 +170,7 @@ def iniciar_atestado():
 
 def iniciar_validacao():
     _desabilitar_botoes()
-    area_saida.delete(1.0, tk.END)
+    area_saida.delete("1.0", "end")
 
     conn = db.conectar()
     db.popular_bd_se_vazio(conn)
@@ -199,7 +222,7 @@ def iniciar_validacao():
             bd_pares = {(r['funcao'], r['md_cobranca']) for r in bd_records}
             datas    = {r['data'] for r in medicao_records}
 
-            conteudo    = gerar_relatorio(
+            conteudo = gerar_relatorio(
                 inconsistencias, registros_atuais,
                 n_pares_bd=len(bd_pares),
                 n_datas=len(datas),
@@ -220,23 +243,75 @@ def iniciar_validacao():
     threading.Thread(target=tarefa, daemon=True).start()
 
 
-# ---------------------------------------------------------------------------
-# Saída / relatório
-# ---------------------------------------------------------------------------
+def _ler_medicao_hr(path: Path):
+    wb = openpyxl.load_workbook(str(path), read_only=True, data_only=True)
+    try:
+        ws = wb['Frequencia'] if 'Frequencia' in wb.sheetnames else wb['Frequência']
+        registros = []
+        n = 0
+        first = True
+        for row in ws.iter_rows(values_only=True):
+            if first:
+                first = False
+                continue
+            if row is None or all(c is None for c in row):
+                continue
+            n += 1
+            mat_val = row[_COL_RE]      if len(row) > _COL_RE      else None
+            dat_val = row[_COL_DATA]    if len(row) > _COL_DATA    else None
+            hr_val  = row[_COL_HR_TRAB] if len(row) > _COL_HR_TRAB else None
+            matricula = str(mat_val).strip() if mat_val is not None else ''
+            if hasattr(dat_val, 'strftime'):
+                data_str = dat_val.strftime('%d/%m/%Y')
+            else:
+                data_str = str(dat_val).strip() if dat_val is not None else ''
+            hr_trab = float(hr_val) if hr_val is not None else None
+            registros.append({'matricula': matricula, 'data': data_str, 'hr_trabalhadas': hr_trab})
+    finally:
+        wb.close()
+    return registros, n
+
+
+def iniciar_validar_hr():
+    _desabilitar_botoes()
+    area_saida.delete("1.0", "end")
+
+    caminho = selecionar_arquivo("Selecione a planilha de Medição")
+    if not caminho:
+        imprimir_log("Operação cancelada: arquivo não foi selecionado.\n")
+        _habilitar_botoes()
+        return
+
+    imprimir_log("Validando horas trabalhadas...\n")
+
+    def tarefa():
+        try:
+            registros, n_linhas = _ler_medicao_hr(Path(caminho))
+            inconsistencias = _validar_hr(registros)
+            conteudo = _gerar_relatorio_hr(inconsistencias, str(Path(caminho).resolve()), n_linhas)
+            caminho_rel = _salvar_relatorio_hr(conteudo)
+            imprimir_log(f"Relatório gerado em: {caminho_rel}\n")
+            imprimir_log(f"Total de inconsistências: {len(inconsistencias)}\n")
+        except Exception as e:
+            imprimir_log(f"\n[ERRO] {str(e)}\n")
+        finally:
+            _habilitar_botoes()
+
+    threading.Thread(target=tarefa, daemon=True).start()
+
 
 def mostrar_resultado(resultado):
-    """Formata o Resultado do service e exibe no log; exporta .txt se houver inconsistências."""
-    processados = resultado.processados
-    atualizados = resultado.atualizados
-    ferias_proc = resultado.ferias_processadas
-    ferias_atu  = resultado.ferias_atualizadas
+    processados    = resultado.processados
+    atualizados    = resultado.atualizados
+    ferias_proc    = resultado.ferias_processadas
+    ferias_atu     = resultado.ferias_atualizadas
     atestados_proc = resultado.atestados_processados
     atestados_atu  = resultado.atestados_atualizados
     inconsistencias = resultado.inconsistencias
-    caminho_saida = resultado.caminho_saida
+    caminho_saida   = resultado.caminho_saida
 
     log = (
-        "Processamento Concluído com Sucesso!\n"
+        "Processamento concluído com sucesso.\n"
         "--------------------------------------------------\n"
         f"Treinamentos processados: {processados}\n"
         f"Treinamentos atualizados: {atualizados}\n"
@@ -245,7 +320,6 @@ def mostrar_resultado(resultado):
         f"Atestados processados:    {atestados_proc}\n"
         f"Linhas com atestado:      {atestados_atu}\n"
     )
-
     nome_arquivo = os.path.basename(caminho_saida)
     log += f"Arquivo gerado:         {nome_arquivo}\n"
     log += f"Inconsistências totais: {len(inconsistencias)}\n"
@@ -253,7 +327,7 @@ def mostrar_resultado(resultado):
     if inconsistencias:
         log += "\n--- LISTA DE INCONSISTÊNCIAS (preview: primeiros 10) ---\n"
         for inc in inconsistencias[:10]:
-            mat = inc.matricula or '-'
+            mat  = inc.matricula or '-'
             data = inc.data or '-'
             erro = inc.erro or 'erro desconhecido'
             log += f"{mat} | {data} | {erro}\n"
@@ -264,7 +338,6 @@ def mostrar_resultado(resultado):
             title="Selecione o diretório para salvar o relatório de inconsistências"
         )
         output_dir = selected_dir if selected_dir else os.path.dirname(caminho_saida)
-
         log += "\nExportando relatório de inconsistências...\n"
         caminho_relatorio = salvar_relatorio_inconsistencias(output_dir, inconsistencias)
         if caminho_relatorio:
@@ -275,87 +348,238 @@ def mostrar_resultado(resultado):
 
 def imprimir_log(texto):
     def inserir():
-        area_saida.insert(tk.END, texto)
-        area_saida.see(tk.END)
+        area_saida.insert("end", texto)
+        area_saida.see("end")
     janela.after(0, inserir)
 
 
 # ---------------------------------------------------------------------------
-# Interface
+# Sidebar navigation
 # ---------------------------------------------------------------------------
 
-janela = tk.Tk()
+def _ativar_aba(tab_id):
+    if tab_id == 'lancar':
+        nav_lancar.configure(fg_color=_LARANJA, text_color=_TXT_INV, font=_fonte_nav_ativo)
+        nav_validacao.configure(fg_color="transparent", text_color=_TXT_NAV, font=_fonte_nav)
+        frame_validacao.pack_forget()
+        frame_lancar.pack(padx=16, pady=12, fill="x")
+    else:
+        nav_lancar.configure(fg_color="transparent", text_color=_TXT_NAV, font=_fonte_nav)
+        nav_validacao.configure(fg_color=_LARANJA, text_color=_TXT_INV, font=_fonte_nav_ativo)
+        frame_lancar.pack_forget()
+        frame_validacao.pack(padx=16, pady=12, fill="x")
+
+
+# ---------------------------------------------------------------------------
+# Window
+# ---------------------------------------------------------------------------
+
+ctk.set_appearance_mode("light")
+ctk.set_default_color_theme("blue")
+
+janela = ctk.CTk()
 janela.title("Automação de Medição")
-janela.geometry("600x500")
+janela.geometry("860x560")
+janela.minsize(700, 480)
+
+# Load IBM Plex Sans from design/fonts/ on Windows
+if platform.system() == "Windows":
+    for _fn in ("IBMPlexSans-Regular.ttf", "IBMPlexSans-SemiBold.ttf"):
+        _fp = os.path.join(base_path, "design", "fonts", _fn)
+        if os.path.exists(_fp):
+            try:
+                ctypes.windll.gdi32.AddFontResourceExW(_fp, 0x10, 0)
+            except Exception:
+                pass
+
 janela.update_idletasks()
+_familia = "IBM Plex Sans" if "IBM Plex Sans" in tkfont.families() else "Segoe UI"
 _w = janela.winfo_width()
 _h = janela.winfo_height()
 _x = (janela.winfo_screenwidth() - _w) // 2
 _y = (janela.winfo_screenheight() - _h) // 2
 janela.geometry(f"{_w}x{_h}+{_x}+{_y}")
-janela.configure(padx=20, pady=20)
 
-lbl_titulo = tk.Label(
-    janela,
-    text="Automação de Medição",
-    font=("Arial", 16, "bold"),
+_fonte_nav      = ctk.CTkFont(family=_familia, size=13)
+_fonte_nav_ativo = ctk.CTkFont(family=_familia, size=13, weight="bold")
+_fonte_heading  = ctk.CTkFont(family=_familia, size=14, weight="bold")
+_fonte_botao    = ctk.CTkFont(family=_familia, size=12)
+_fonte_label    = ctk.CTkFont(family=_familia, size=11)
+_fonte_log      = ctk.CTkFont(family="Courier New", size=10)
+
+janela.grid_columnconfigure(1, weight=1)
+janela.grid_rowconfigure(0, weight=1)
+
+# ---------------------------------------------------------------------------
+# Sidebar
+# ---------------------------------------------------------------------------
+
+sidebar = ctk.CTkFrame(janela, width=200, corner_radius=0, fg_color=_CHUMBO)
+sidebar.grid(row=0, column=0, sticky="nsew")
+sidebar.grid_propagate(False)
+sidebar.grid_columnconfigure(0, weight=1)
+sidebar.grid_rowconfigure(5, weight=1)
+
+ctk.CTkLabel(
+    sidebar,
+    text="Automação de\nMedição",
+    font=_fonte_heading,
+    text_color=_TXT_INV,
+    justify="left",
+    anchor="w",
+).grid(row=0, column=0, padx=18, pady=(20, 6), sticky="w")
+
+tk.Frame(sidebar, height=1, bg="#3a3a3a").grid(
+    row=1, column=0, padx=18, pady=(2, 10), sticky="ew"
 )
-lbl_titulo.pack(pady=(0, 20))
 
-frame_botoes = tk.Frame(janela)
-frame_botoes.pack(fill=tk.X, pady=(0, 20))
+ctk.CTkLabel(
+    sidebar,
+    text="MÓDULOS",
+    font=ctk.CTkFont(family=_familia, size=10, weight="bold"),
+    text_color="#6a6a6a",
+    anchor="w",
+).grid(row=2, column=0, padx=18, pady=(0, 4), sticky="w")
 
-botao_lancar = tk.Button(
-    frame_botoes,
+nav_lancar = ctk.CTkButton(
+    sidebar,
+    text="Lançar",
+    font=_fonte_nav_ativo,
+    fg_color=_LARANJA,
+    hover_color=_LARANJA_HV,
+    text_color=_TXT_INV,
+    anchor="w",
+    corner_radius=4,
+    height=36,
+    command=lambda: _ativar_aba('lancar'),
+)
+nav_lancar.grid(row=3, column=0, padx=8, pady=2, sticky="ew")
+
+nav_validacao = ctk.CTkButton(
+    sidebar,
+    text="Validação",
+    font=_fonte_nav,
+    fg_color="transparent",
+    hover_color=_CHUMBO_2,
+    text_color=_TXT_NAV,
+    anchor="w",
+    corner_radius=4,
+    height=36,
+    command=lambda: _ativar_aba('validacao'),
+)
+nav_validacao.grid(row=4, column=0, padx=8, pady=2, sticky="ew")
+
+ctk.CTkLabel(
+    sidebar,
+    text="Manserv · 2026",
+    font=ctk.CTkFont(family=_familia, size=10),
+    text_color="#555555",
+    anchor="w",
+).grid(row=6, column=0, padx=18, pady=(0, 12), sticky="sw")
+
+# ---------------------------------------------------------------------------
+# Content area
+# ---------------------------------------------------------------------------
+
+content = ctk.CTkFrame(janela, corner_radius=0, fg_color=_CONTEUDO)
+content.grid(row=0, column=1, sticky="nsew")
+
+painel_botoes = ctk.CTkFrame(content, corner_radius=0, fg_color=_PAINEL)
+painel_botoes.pack(fill="x")
+
+# Lançar button group
+frame_lancar = ctk.CTkFrame(painel_botoes, fg_color=_PAINEL, corner_radius=0)
+
+botao_lancar = ctk.CTkButton(
+    frame_lancar,
     text="Lançar treinamentos",
+    font=_fonte_botao,
+    fg_color=_LARANJA,
+    hover_color=_LARANJA_HV,
+    text_color=_TXT_INV,
+    corner_radius=4,
+    height=36,
     command=iniciar_lancamento,
-    font=("Arial", 11),
-    height=2,
-    width=20,
 )
-botao_lancar.pack(side=tk.LEFT, padx=5)
+botao_lancar.pack(side="left", padx=(0, 8))
 
-botao_ferias = tk.Button(
-    frame_botoes,
-    text="Lançar Férias",
+botao_ferias = ctk.CTkButton(
+    frame_lancar,
+    text="Lançar férias",
+    font=_fonte_botao,
+    fg_color=_LARANJA,
+    hover_color=_LARANJA_HV,
+    text_color=_TXT_INV,
+    corner_radius=4,
+    height=36,
     command=iniciar_ferias,
-    font=("Arial", 11),
-    height=2,
-    width=20,
 )
-botao_ferias.pack(side=tk.LEFT, padx=5)
+botao_ferias.pack(side="left", padx=(0, 8))
 
-botao_atestado = tk.Button(
-    frame_botoes,
-    text="Lançar Atestados",
+botao_atestado = ctk.CTkButton(
+    frame_lancar,
+    text="Lançar atestados",
+    font=_fonte_botao,
+    fg_color=_LARANJA,
+    hover_color=_LARANJA_HV,
+    text_color=_TXT_INV,
+    corner_radius=4,
+    height=36,
     command=iniciar_atestado,
-    font=("Arial", 11),
-    height=2,
-    width=20,
 )
-botao_atestado.pack(side=tk.LEFT, padx=5)
+botao_atestado.pack(side="left")
 
-botao_validar = tk.Button(
-    frame_botoes,
-    text="Validar Distribuição",
+# Validação button group
+frame_validacao = ctk.CTkFrame(painel_botoes, fg_color=_PAINEL, corner_radius=0)
+
+botao_validar = ctk.CTkButton(
+    frame_validacao,
+    text="Validar distribuição",
+    font=_fonte_botao,
+    fg_color=_LARANJA,
+    hover_color=_LARANJA_HV,
+    text_color=_TXT_INV,
+    corner_radius=4,
+    height=36,
     command=iniciar_validacao,
-    font=("Arial", 11),
-    height=2,
-    width=20,
 )
-botao_validar.pack(side=tk.LEFT, padx=5)
+botao_validar.pack(side="left", padx=(0, 8))
 
-lbl_saida = tk.Label(janela, text="Log de Execução:", font=("Arial", 10))
-lbl_saida.pack(anchor=tk.W, pady=(10, 5))
-
-area_saida = scrolledtext.ScrolledText(
-    janela,
-    width=70,
-    height=15,
-    font=("Courier", 10),
-    bg="#f4f4f4",
+botao_validar_hr = ctk.CTkButton(
+    frame_validacao,
+    text="Validar Hr Trabalhadas",
+    font=_fonte_botao,
+    fg_color=_LARANJA,
+    hover_color=_LARANJA_HV,
+    text_color=_TXT_INV,
+    corner_radius=4,
+    height=36,
+    command=iniciar_validar_hr,
 )
-area_saida.pack(fill=tk.BOTH, expand=True)
+botao_validar_hr.pack(side="left")
+
+# Show Lançar tab by default
+frame_lancar.pack(padx=16, pady=12, fill="x")
+
+ctk.CTkLabel(
+    content,
+    text="Log de execução",
+    font=_fonte_label,
+    text_color="#5a5a5a",
+    anchor="w",
+).pack(padx=16, pady=(8, 4), anchor="w")
+
+area_saida = ctk.CTkTextbox(
+    content,
+    font=_fonte_log,
+    fg_color="#f4f4f4",
+    text_color=_CHUMBO,
+    corner_radius=4,
+    border_width=1,
+    border_color="#d9d9d9",
+    wrap="word",
+)
+area_saida.pack(fill="both", expand=True, padx=16, pady=(0, 16))
 
 
 if __name__ == "__main__":
