@@ -26,11 +26,11 @@ def test_fluxo_completo(tmp_path):
         res = main.run()
         
     # Devemos ter 3 registros processados com as fixtures ("TR-SIMPLES", "TR-REMUNERADO", "TR-MULTIDIA")
-    assert res['processados'] == 3
+    assert res.processados == 3
     # User 111 teve 2 treinamentos no mesmo dia (agrupa em 1) e User 222 teve 1 em multi-dia (expande em 2). 1+2 = 3.
-    assert res['atualizados'] == 3
+    assert res.atualizados == 3
     # Nenhuma inconsistência deve rolar se o RE estiver certinho
-    assert len(res['inconsistencias']) == 0
+    assert len(res.inconsistencias) == 0
     
     # Validações internas do conteúdo salvo no Excel final
     wb = openpyxl.load_workbook(saida)

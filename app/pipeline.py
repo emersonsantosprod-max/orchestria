@@ -20,9 +20,11 @@ Invariantes:
 from __future__ import annotations
 
 import os
+import sqlite3
 from dataclasses import dataclass, field
 
-from app import atestado, ferias, loaders, treinamento, excel as writer
+from app import atestado, db, ferias, loaders, treinamento, excel as writer
+from app import validar_distribuicao as vdist
 
 
 # ---------------------------------------------------------------------------
@@ -39,15 +41,6 @@ class Resultado:
     atestados_atualizados: int = 0
     inconsistencias: list = field(default_factory=list)
     caminho_saida: str = ''
-
-    # Compat dict-like transitório (GUI legado usa .get()).
-    def get(self, key, default=None):
-        return getattr(self, key, default)
-
-    def __getitem__(self, key):
-        if not hasattr(self, key):
-            raise KeyError(key)
-        return getattr(self, key)
 
 
 # ---------------------------------------------------------------------------
@@ -77,6 +70,8 @@ def processar(
     caminho_base_cobranca: str = '',
     caminho_atestado: str = '',
     caminho_saida: str = '',
+    conn: sqlite3.Connection | None = None,
+    validar_distribuicao: bool = False,
 ) -> Resultado:
     """
     Executa o pipeline completo.
@@ -87,6 +82,9 @@ def processar(
 
     Se caminho_saida vazio, usa o diretório da medição.
     """
+    if validar_distribuicao and conn is None:
+        raise ValueError("validar_distribuicao=True requires conn")
+
     treinamento_ativo = bool(caminho_treinamentos and caminho_classificacao)
     ferias_ativo      = bool(caminho_ferias and caminho_base_cobranca)
     atestado_ativo    = bool(caminho_atestado)
@@ -118,7 +116,7 @@ def processar(
         col_map = writer.mapear_colunas(sheet_ro)
         (index, obs_existentes, descontos_existentes,
          md_cobranca_por_chave, sg_funcao_por_chave,
-         medicao_por_matricula) = writer.indexar_e_ler_dados(sheet_ro, col_map)
+         medicao_por_matricula, medicao_records) = writer.indexar_e_ler_dados(sheet_ro, col_map)
         wb_ro.close()
 
     except FileNotFoundError as e:
@@ -179,6 +177,12 @@ def processar(
     except Exception as e:
         raise RuntimeError(f"Erro ao gravar arquivo final: {e}")
 
+    inconst_validacao = []
+    if validar_distribuicao:
+        bd_records = db.obter_bd(conn)
+        if bd_records:
+            inconst_validacao = vdist.validar_para_dominio(bd_records, medicao_records)
+
     return Resultado(
         processados=len(dados),
         atualizados=len(updates_treinamento),
@@ -186,7 +190,7 @@ def processar(
         ferias_atualizadas=len(updates_ferias),
         atestados_processados=len(dados_atestado),
         atestados_atualizados=len(updates_atestado) - len(inconst_atestado_writer),
-        inconsistencias=inconst_trein + inconst_ferias + inconst_atestado + inconst_escrita,
+        inconsistencias=inconst_trein + inconst_ferias + inconst_atestado + inconst_escrita + inconst_validacao,
         caminho_saida=caminho_saida,
     )
 
@@ -205,10 +209,10 @@ def salvar_relatorio_inconsistencias(caminho_dir: str, inconsistencias: list):
         f.write("RELATÓRIO DE INCONSISTÊNCIAS\n")
         f.write("=" * 80 + "\n\n")
         for inc in inconsistencias:
-            linha = inc.get('linha', '-')
-            matricula = inc.get('matricula', '-')
-            data = inc.get('data', '-')
-            erro = inc.get('erro', 'erro desconhecido')
+            linha = inc.linha if inc.linha != '' else '-'
+            matricula = inc.matricula or '-'
+            data = inc.data or '-'
+            erro = inc.erro or 'erro desconhecido'
             f.write(f"Linha: {linha} | Matrícula: {matricula} | Data: {data} | Erro: {erro}\n")
 
     return caminho_saida

@@ -12,8 +12,8 @@ Invariantes:
   - Update.tipo ∈ {'treinamento','ferias','atestado'}
   - Inconsistencia.origem ∈ {'treinamento','ferias','atestado','writer'} (sem default)
   - situacao só é permitida para tipo='ferias' ou tipo='atestado'
-  - Update e Inconsistencia expõem acesso dict-like (get/__getitem__) como
-    camada transitória para consumidores legados. Remover em cleanup.
+  - Update e Inconsistencia são dataclasses puras: acesso sempre por atributo.
+    Não usar obj['x'] / obj.get('x') / 'x' in obj.
 """
 
 from __future__ import annotations
@@ -137,32 +137,8 @@ _TIPOS_VALIDOS = ('treinamento', 'ferias', 'atestado')
 _ORIGENS_VALIDAS = ('treinamento', 'ferias', 'atestado', 'writer')
 
 
-class _DictLike:
-    """
-    Mixin: permite acesso dict-like a dataclasses (.get / [key] / in).
-    Usado por consumidores que esperavam dicts antes da unificação
-    (relatório de inconsistências, GUI, asserts em testes).
-    """
-
-    _ALIASES: dict = {}
-
-    def get(self, key, default=None):
-        key = self._ALIASES.get(key, key)
-        return getattr(self, key, default)
-
-    def __getitem__(self, key):
-        key = self._ALIASES.get(key, key)
-        if not hasattr(self, key):
-            raise KeyError(key)
-        return getattr(self, key)
-
-    def __contains__(self, key):
-        key = self._ALIASES.get(key, key)
-        return hasattr(self, key)
-
-
 @dataclass
-class Update(_DictLike):
+class Update:
     """
     Contrato unificado de atualização produzido por domínios e consumido pelo writer.
 
@@ -186,9 +162,6 @@ class Update(_DictLike):
     sobrescrever_obs: bool = False
     row: Optional[int] = None
 
-    # Compat: writer/testes legados acessam 'desconto' em minutos.
-    _ALIASES = {'desconto': 'desconto_min'}
-
     def __post_init__(self):
         if self.tipo not in _TIPOS_VALIDOS:
             raise ValueError(f"Update.tipo inválido: {self.tipo!r}")
@@ -200,7 +173,7 @@ class Update(_DictLike):
 
 
 @dataclass
-class Inconsistencia(_DictLike):
+class Inconsistencia:
     """
     Contrato unificado de inconsistência.
     origem é obrigatória (primeiro campo, sem default).

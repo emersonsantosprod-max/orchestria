@@ -23,6 +23,8 @@ if app_path not in sys.path:
     sys.path.append(app_path)
 
 from app.pipeline import processar, salvar_relatorio_inconsistencias
+from app import db
+from app.validar_distribuicao import validar, gerar_relatorio, _salvar_relatorio
 
 
 # ---------------------------------------------------------------------------
@@ -44,12 +46,14 @@ def _desabilitar_botoes():
     botao_lancar.config(state=tk.DISABLED)
     botao_ferias.config(state=tk.DISABLED)
     botao_atestado.config(state=tk.DISABLED)
+    botao_validar.config(state=tk.DISABLED)
 
 
 def _habilitar_botoes():
     janela.after(0, lambda: botao_lancar.config(state=tk.NORMAL))
     janela.after(0, lambda: botao_ferias.config(state=tk.NORMAL))
     janela.after(0, lambda: botao_atestado.config(state=tk.NORMAL))
+    janela.after(0, lambda: botao_validar.config(state=tk.NORMAL))
 
 
 def _executar_fluxo(titulo_log: str, prompts: list, montar_kwargs):
@@ -74,15 +78,22 @@ def _executar_fluxo(titulo_log: str, prompts: list, montar_kwargs):
     imprimir_log(f"Iniciando {titulo_log}...\n")
 
     def tarefa():
+        conn = db.conectar()
         try:
+            db.popular_bd_se_vazio(conn)
             imprimir_log("Fase 1/3: Lendo arquivos (modo otimizado)...\n")
-            resultado = processar(**montar_kwargs(caminhos))
+            resultado = processar(
+                **montar_kwargs(caminhos),
+                conn=conn,
+                validar_distribuicao=True,
+            )
             imprimir_log("Fase 2/3: Processando regras de negócio...\n")
             imprimir_log("Fase 3/3: Gravando resultados no Excel (isso pode demorar)...\n")
             mostrar_resultado(resultado)
         except Exception as e:
             imprimir_log(f"\n[ERRO] {str(e)}")
         finally:
+            conn.close()
             _habilitar_botoes()
 
     threading.Thread(target=tarefa, daemon=True).start()
@@ -134,20 +145,87 @@ def iniciar_atestado():
     )
 
 
+def iniciar_validacao():
+    _desabilitar_botoes()
+    area_saida.delete(1.0, tk.END)
+
+    conn = db.conectar()
+    db.popular_bd_se_vazio(conn)
+    registros = db.obter_registro_arquivos(conn)
+    conn.close()
+
+    caminho_bd = None
+    caminho_medicao = None
+
+    if 'medicao' not in registros:
+        imprimir_log("Medição não registrada — solicitando arquivo...\n")
+        caminho_medicao = selecionar_arquivo("Selecione o arquivo de Medição Frequência")
+        if not caminho_medicao:
+            imprimir_log("Operação cancelada: Medição não foi selecionada.\n")
+            _habilitar_botoes()
+            return
+
+    imprimir_log("Executando validação...\n")
+
+    def tarefa():
+        try:
+            conn = db.conectar()
+            avisos_import = []
+
+            if caminho_bd:
+                imprimir_log("Registrando BD...\n")
+                db.registrar_bd(caminho_bd, conn)
+
+            if caminho_medicao:
+                imprimir_log("Registrando Medição...\n")
+                avisos = db.registrar_medicao(caminho_medicao, conn)
+                avisos_import.extend(avisos)
+
+            registros_atuais = db.obter_registro_arquivos(conn)
+            bd_records       = db.obter_bd(conn)
+            medicao_records  = db.obter_medicao(conn)
+            conn.close()
+
+            inconsistencias = validar(bd_records, medicao_records)
+
+            bd_pares = {(r['funcao'], r['md_cobranca']) for r in bd_records}
+            datas    = {r['data'] for r in medicao_records}
+
+            conteudo    = gerar_relatorio(
+                inconsistencias, registros_atuais,
+                n_pares_bd=len(bd_pares),
+                n_datas=len(datas),
+                avisos_import=avisos_import,
+            )
+            caminho_rel = _salvar_relatorio(conteudo)
+
+            imprimir_log(f"Relatório gerado em: {caminho_rel}\n")
+            imprimir_log(f"Total de inconsistências: {len(inconsistencias)}\n")
+            for av in avisos_import:
+                imprimir_log(f"[AVISO] {av}\n")
+
+        except Exception as e:
+            imprimir_log(f"\n[ERRO] {str(e)}\n")
+        finally:
+            _habilitar_botoes()
+
+    threading.Thread(target=tarefa, daemon=True).start()
+
+
 # ---------------------------------------------------------------------------
 # Saída / relatório
 # ---------------------------------------------------------------------------
 
 def mostrar_resultado(resultado):
     """Formata o Resultado do service e exibe no log; exporta .txt se houver inconsistências."""
-    processados = resultado.get('processados', 0)
-    atualizados = resultado.get('atualizados', 0)
-    ferias_proc = resultado.get('ferias_processadas', 0)
-    ferias_atu  = resultado.get('ferias_atualizadas', 0)
-    atestados_proc = resultado.get('atestados_processados', 0)
-    atestados_atu  = resultado.get('atestados_atualizados', 0)
-    inconsistencias = resultado.get('inconsistencias', [])
-    caminho_saida = resultado.get('caminho_saida', '')
+    processados = resultado.processados
+    atualizados = resultado.atualizados
+    ferias_proc = resultado.ferias_processadas
+    ferias_atu  = resultado.ferias_atualizadas
+    atestados_proc = resultado.atestados_processados
+    atestados_atu  = resultado.atestados_atualizados
+    inconsistencias = resultado.inconsistencias
+    caminho_saida = resultado.caminho_saida
 
     log = (
         "Processamento Concluído com Sucesso!\n"
@@ -167,9 +245,9 @@ def mostrar_resultado(resultado):
     if inconsistencias:
         log += "\n--- LISTA DE INCONSISTÊNCIAS (preview: primeiros 10) ---\n"
         for inc in inconsistencias[:10]:
-            mat = inc.get('matricula', '-')
-            data = inc.get('data', '-')
-            erro = inc.get('erro', 'erro desconhecido')
+            mat = inc.matricula or '-'
+            data = inc.data or '-'
+            erro = inc.erro or 'erro desconhecido'
             log += f"{mat} | {data} | {erro}\n"
         if len(inconsistencias) > 10:
             log += f"... ({len(inconsistencias) - 10} inconsistências adicionais no relatório)\n"
@@ -248,6 +326,16 @@ botao_atestado = tk.Button(
     width=20,
 )
 botao_atestado.pack(side=tk.LEFT, padx=5)
+
+botao_validar = tk.Button(
+    frame_botoes,
+    text="Validar Distribuição",
+    command=iniciar_validacao,
+    font=("Arial", 11),
+    height=2,
+    width=20,
+)
+botao_validar.pack(side=tk.LEFT, padx=5)
 
 lbl_saida = tk.Label(janela, text="Log de Execução:", font=("Arial", 10))
 lbl_saida.pack(anchor=tk.W, pady=(10, 5))

@@ -51,9 +51,9 @@ def test_erro_matricula_nao_encontrada(tmp_path):
     _, erros = writer.aplicar_updates(updates, col_map, index)
 
     assert len(erros) == 1
-    assert erros[0]['matricula'] == '404'
-    assert erros[0]['erro'] == 'matrícula não encontrada'
-    assert erros[0]['origem'] == 'writer'
+    assert erros[0].matricula == '404'
+    assert erros[0].erro == 'matrícula não encontrada'
+    assert erros[0].origem == 'writer'
 
 
 def test_mapear_ambiguidade_descontos(tmp_path):

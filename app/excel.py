@@ -144,11 +144,12 @@ def mapear_colunas(sheet) -> dict:
         'matricula':   ['re', 'matricula'],
         'desconto':    ['descontos'],
         'observacao':  ['observacao', 'observacoes'],
-        # Opcionais — necessários para férias/atestado.
-        'situacao':    ['situacao'],
-        'md_cobranca': ['md cobranca'],
-        'sg_funcao':   ['sg funcao'],
-        'tag':         ['tag'],
+        # Opcionais — necessários para férias/atestado/validação.
+        'situacao':     ['situacao'],
+        'md_cobranca':  ['md cobranca'],
+        'sg_funcao':    ['sg funcao'],
+        'tag':          ['tag'],
+        'pct_cobranca': ['% cobranca', 'pct cobranca'],
     }
 
     for row_idx, row in enumerate(
@@ -188,19 +189,25 @@ def mapear_colunas(sheet) -> dict:
 
 def indexar_e_ler_dados(sheet, col_map: dict) -> tuple:
     """
-    Retorna (sempre tupla de 6):
+    Retorna (sempre tupla de 7):
       index                : {(matricula, data_str): [row_1based, ...]}
       obs_existentes       : {(matricula, data_str): str}
       descontos_existentes : {(matricula, data_str): int_minutos}
       md_cobranca_por_chave: {(matricula, data_str): str_UPPER}
       sg_funcao_por_chave  : {(matricula, data_str): str_UPPER}
       medicao_por_matricula: {matricula: [(date_obj, data_str, [rows]), ...]}
+      medicao_records      : list[dict] com (data, sg_funcao, md_cobranca,
+                             pct_cobranca) por linha — usado por
+                             validar_distribuicao.validar_para_dominio sem
+                             segunda leitura. Requer col_map com sg_funcao,
+                             md_cobranca e pct_cobranca; caso contrário list vazia.
     """
     index = {}
     obs_existentes = {}
     descontos_existentes = {}
     md_cobranca_por_chave = {}
     sg_funcao_por_chave = {}
+    medicao_records: list[dict] = []
 
     col_re   = col_map['matricula']
     col_dt   = col_map['data']
@@ -208,6 +215,7 @@ def indexar_e_ler_dados(sheet, col_map: dict) -> tuple:
     col_desc = col_map['desconto']
     col_mdc  = col_map.get('md_cobranca')
     col_sgf  = col_map.get('sg_funcao')
+    col_pct  = col_map.get('pct_cobranca')
     hrow     = col_map['_header_row']
 
     for row_idx, row in enumerate(sheet.iter_rows(values_only=True), start=1):
@@ -234,6 +242,24 @@ def indexar_e_ler_dados(sheet, col_map: dict) -> tuple:
         if col_sgf is not None and row[col_sgf] is not None:
             sg_funcao_por_chave[chave] = str(row[col_sgf]).strip().upper()
 
+        if col_sgf is not None and col_mdc is not None and col_pct is not None:
+            sg = row[col_sgf]
+            mdc = row[col_mdc]
+            pct = row[col_pct]
+            if sg is not None and mdc is not None:
+                try:
+                    pct_f = float(pct) if pct is not None else 0.0
+                except (TypeError, ValueError):
+                    pct_f = 0.0
+                if pct_f > 1.0:
+                    pct_f = pct_f / 100
+                medicao_records.append({
+                    'data':         data_str,
+                    'sg_funcao':    str(sg).strip().upper(),
+                    'md_cobranca':  str(mdc).strip().upper(),
+                    'pct_cobranca': pct_f,
+                })
+
     medicao_por_matricula = {}
     for (matricula, data_str), rows in index.items():
         data_obj = _core_parse_data_obj(data_str)
@@ -250,6 +276,7 @@ def indexar_e_ler_dados(sheet, col_map: dict) -> tuple:
         md_cobranca_por_chave,
         sg_funcao_por_chave,
         medicao_por_matricula,
+        medicao_records,
     )
 
 

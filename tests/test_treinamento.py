@@ -56,9 +56,9 @@ def test_processar_fluxo_simples():
 
     assert len(erros) == 0
     assert len(atualizacoes) == 1
-    assert atualizacoes[0]['matricula'] == '123'
-    assert atualizacoes[0]['desconto'] == 120  # 2 horas = 120 minutos
-    assert atualizacoes[0]['observacao'] == 'TREIN. TR - 2H'
+    assert atualizacoes[0].matricula == '123'
+    assert atualizacoes[0].desconto_min == 120  # 2 horas = 120 minutos
+    assert atualizacoes[0].observacao == 'TREIN. TR - 2H'
 
 def test_carga_zero_gera_erro_de_carga():
     dados = [{'linha': 1, 'matricula': '123', 'nome': 'A',
@@ -67,7 +67,7 @@ def test_carga_zero_gera_erro_de_carga():
     atualizacoes, erros = treinamento.processar_treinamentos(dados, tabela, {})
     assert len(atualizacoes) == 0
     assert len(erros) == 1
-    assert erros[0]['erro'] == 'erro de carga'
+    assert erros[0].erro == 'erro de carga'
 
 def test_observacao_usa_nome_em_maiusculo():
     atualizacoes, erros = treinamento.processar_treinamentos(
@@ -77,4 +77,4 @@ def test_observacao_usa_nome_em_maiusculo():
         {},
     )
     assert len(erros) == 0
-    assert atualizacoes[0]['observacao'] == 'TREIN. NR-10 - 2H'
+    assert atualizacoes[0].observacao == 'TREIN. NR-10 - 2H'

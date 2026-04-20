@@ -40,9 +40,9 @@ def test_regressao_ferias_direto_com_observacao():
     assert incs == []
     assert len(atus) == 1
     a = atus[0]
-    assert a['situacao'] == 'FÉRIAS'
-    assert a['observacao'] == '06/04 a 05/05 - FÉRIAS'
-    assert a['sobrescrever_obs'] is True   # SEMPRE True em férias
+    assert a.situacao == 'FÉRIAS'
+    assert a.observacao == '06/04 a 05/05 - FÉRIAS'
+    assert a.sobrescrever_obs is True   # SEMPRE True em férias
 
 
 def test_regressao_writer_emite_patch_com_observacao():
@@ -84,9 +84,9 @@ def test_ferias_sd_emite_observacao_com_sufixo():
         date(2026, 4, 1), _col_map_minimo(),
     )
     assert incs == []
-    assert atus[0]['situacao'] == 'FÉRIAS S/ DESC'
-    assert atus[0]['observacao'] == '01/04 a 03/04 - FÉRIAS (NÃO DESCONTA)'
-    assert atus[0]['sobrescrever_obs'] is True
+    assert atus[0].situacao == 'FÉRIAS S/ DESC'
+    assert atus[0].observacao == '01/04 a 03/04 - FÉRIAS (NÃO DESCONTA)'
+    assert atus[0].sobrescrever_obs is True
 
 
 def test_ferias_normal_emite_observacao_sem_sufixo():
@@ -104,9 +104,9 @@ def test_ferias_normal_emite_observacao_sem_sufixo():
         dados, base_cob, medicao_por_mat, md_cob, sg_fun,
         date(2026, 4, 1), _col_map_minimo(),
     )
-    assert atus[0]['situacao'] == 'FÉRIAS'
-    assert atus[0]['observacao'] == '01/04 a 03/04 - FÉRIAS'
-    assert atus[0]['sobrescrever_obs'] is True
+    assert atus[0].situacao == 'FÉRIAS'
+    assert atus[0].observacao == '01/04 a 03/04 - FÉRIAS'
+    assert atus[0].sobrescrever_obs is True
 
 
 # ---------------------------------------------------------------------------
@@ -131,10 +131,10 @@ def test_rateio_uma_data_multiplas_linhas_atualizadas():
         date(2026, 4, 1), _col_map_minimo(),
     )
     assert incs == []
-    assert sorted(a['row'] for a in atus) == [100, 200, 300]
-    assert all(a['situacao'] == 'FÉRIAS' for a in atus)
-    assert all(a['observacao'] == '01/04 a 01/04 - FÉRIAS' for a in atus)
-    assert all(a['sobrescrever_obs'] is True for a in atus)
+    assert sorted(a.row for a in atus) == [100, 200, 300]
+    assert all(a.situacao == 'FÉRIAS' for a in atus)
+    assert all(a.observacao == '01/04 a 01/04 - FÉRIAS' for a in atus)
+    assert all(a.sobrescrever_obs is True for a in atus)
 
 
 # ---------------------------------------------------------------------------
@@ -161,7 +161,7 @@ def test_observacao_usa_periodo_original_nao_clipped():
         dados, base_cob, medicao_por_mat, md_cob, sg_fun,
         date(2026, 4, 1), _col_map_minimo(),
     )
-    assert all(a['observacao'] == '28/03 a 02/04 - FÉRIAS' for a in atus)
+    assert all(a.observacao == '28/03 a 02/04 - FÉRIAS' for a in atus)
 
 
 # ---------------------------------------------------------------------------

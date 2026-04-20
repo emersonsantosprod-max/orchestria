@@ -44,10 +44,10 @@ def test_intersecao_parcial_mes_anterior():
         date(2026, 4, 1), _col_map_minimo(),
     )
     assert incs == []
-    rows = sorted(a['row'] for a in atus)
+    rows = sorted(a.row for a in atus)
     assert rows == [20, 21]
-    assert all(a['observacao'] == '28/03 a 02/04 - FÉRIAS' for a in atus)
-    assert all(a['situacao'] == 'FÉRIAS' for a in atus)
+    assert all(a.observacao == '28/03 a 02/04 - FÉRIAS' for a in atus)
+    assert all(a.situacao == 'FÉRIAS' for a in atus)
 
 
 # ---------------------------------------------------------------------------
@@ -109,7 +109,7 @@ def test_periodo_invalido(periodo):
     )
     assert atus == []
     assert len(incs) == 1
-    assert incs[0]['erro'] == 'período inválido'
+    assert incs[0].erro == 'período inválido'
 
 
 # ---------------------------------------------------------------------------
@@ -128,7 +128,7 @@ def test_matricula_nao_encontrada_uma_vez():
     )
     assert atus == []
     assert len(incs) == 1
-    assert incs[0]['erro'] == 'matrícula não encontrada'
+    assert incs[0].erro == 'matrícula não encontrada'
 
 
 # ---------------------------------------------------------------------------
@@ -156,7 +156,7 @@ def test_sg_dedup_por_matricula():
     )
     assert atus == []
     assert len(incs) == 1
-    assert incs[0]['erro'] == 'sg função não classificada'
+    assert incs[0].erro == 'sg função não classificada'
 
 
 # ---------------------------------------------------------------------------
@@ -194,6 +194,6 @@ def test_md_cobranca_direto_com_observacao():
     )
     assert incs == []
     assert len(atus) == 1
-    assert atus[0]['situacao'] == 'FÉRIAS'
-    assert atus[0]['observacao'] == '01/04 a 03/04 - FÉRIAS'
-    assert atus[0]['sobrescrever_obs'] is True
+    assert atus[0].situacao == 'FÉRIAS'
+    assert atus[0].observacao == '01/04 a 03/04 - FÉRIAS'
+    assert atus[0].sobrescrever_obs is True

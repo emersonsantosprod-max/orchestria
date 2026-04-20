@@ -5,7 +5,7 @@ a = Analysis(
     ['ui/gui.py'],
     pathex=['.'],
     binaries=[],
-    datas=[],
+    datas=[('data/entrada/distribuicao_contratual_normalizada.xlsx', 'data/entrada')],
     hiddenimports=['openpyxl', 'et_xmlfile', 'tkinter'],
     hookspath=[],
     hooksconfig={},
