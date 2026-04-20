@@ -85,7 +85,7 @@ def _executar_fluxo(titulo_log: str, prompts: list, montar_kwargs):
             resultado = processar(
                 **montar_kwargs(caminhos),
                 conn=conn,
-                validar_distribuicao=True,
+                validar_distribuicao=False,
             )
             imprimir_log("Fase 2/3: Processando regras de negócio...\n")
             imprimir_log("Fase 3/3: Gravando resultados no Excel (isso pode demorar)...\n")
@@ -156,6 +156,14 @@ def iniciar_validacao():
 
     caminho_bd = None
     caminho_medicao = None
+
+    if 'bd' not in registros:
+        imprimir_log("BD não registrado — solicitando arquivo...\n")
+        caminho_bd = selecionar_arquivo("Selecione o arquivo de BD de Distribuição Contratual")
+        if not caminho_bd:
+            imprimir_log("Operação cancelada: BD não foi selecionado.\n")
+            _habilitar_botoes()
+            return
 
     if 'medicao' not in registros:
         imprimir_log("Medição não registrada — solicitando arquivo...\n")

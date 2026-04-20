@@ -150,7 +150,15 @@ def _linha_tabela(data, funcao, md_cobranca, esperado, realizado, diff, tipo) ->
 
 
 def _cabecalho_tabela() -> str:
-    return _linha_tabela('DATA', 'FUNCAO', 'MD_COBRANCA', 'ESPERADO', 'REALIZADO', 'DIFF', 'TIPO')
+    return (
+        f"{'DATA':<{_W_DATA}}"
+        f"{'FUNCAO':<{_W_FUNCAO}}"
+        f"{'MD_COBRANCA':<{_W_MD}}"
+        f"{'ESPERADO':>{_W_NUM}}  "
+        f"{'REALIZADO':>{_W_NUM}}  "
+        f"{'DIFF':>{_W_NUM}}  "
+        f"{'TIPO'}"
+    )
 
 
 def gerar_relatorio(
