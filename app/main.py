@@ -143,6 +143,9 @@ def main():
     from app.cli.validar_dist import build_parser as _build_vd
     _build_vd(p_vd)
     sub.add_parser('validar-consist', help='Compara medição original vs processada')
+    p_vh = sub.add_parser('validar-hr', help='Valida horas trabalhadas na Medição')
+    from app.cli.validar_hr import build_parser as _build_vh
+    _build_vh(p_vh)
 
     args = parser.parse_args()
     cmd = args.cmd or 'run'
@@ -162,6 +165,11 @@ def main():
         from app.cli.validar_consist import main as _m
         _m()
         sys.exit(0)
+    if cmd == 'validar-hr':
+        from app.cli.validar_hr import main as _m
+        sys.exit(_m(
+            ['--medicao', args.medicao] if args.medicao else []
+        ))
 
 
 if __name__ == '__main__':
