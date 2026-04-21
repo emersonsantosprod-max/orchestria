@@ -7,7 +7,6 @@ a = Analysis(
     binaries=[],
     datas=[
         ('data/entrada/distribuicao_contratual_normalizada.xlsx', 'data/entrada'),
-        ('design/fonts/*.ttf', 'design/fonts'),
         *collect_data_files('customtkinter'),
     ],
     hiddenimports=['openpyxl', 'et_xmlfile', 'tkinter', 'customtkinter'],
