@@ -1,2 +1,16 @@
-openpyxl
-customtkinter
+# GUI
+customtkinter==5.2.2
+darkdetect==0.8.0
+
+# Excel / data
+openpyxl==3.1.5
+xlrd==2.0.2
+pandas==3.0.2
+numpy==2.4.4
+python-dateutil==2.9.0.post0
+six==1.17.0
+et_xmlfile==2.0.0
+
+# Dev / testing
+pytest==9.0.3
+Pygments==2.20.0
