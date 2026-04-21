@@ -4,8 +4,8 @@ from datetime import date
 
 import pytest
 
-from app import ferias, excel as writer
-
+from app import excel as writer
+from app import ferias
 
 # ---------------------------------------------------------------------------
 # Normalização de matrícula (helper compartilhado writer/ferias)

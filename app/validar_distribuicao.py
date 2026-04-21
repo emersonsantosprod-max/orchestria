@@ -34,7 +34,7 @@ class InconsistenciaDistribuicao:
     tipo_inconsistencia: str
 
 
-def validar(
+def validar_aderencia_distribuicao(
     bd_records: list[dict],
     medicao_records: list[dict],
 ) -> list[InconsistenciaDistribuicao]:
@@ -97,7 +97,7 @@ def validar_para_dominio(
 ) -> list[core.Inconsistencia]:
     """Boundary pública para consumidores do pipeline.
 
-    Executa `validar()` e converte cada `InconsistenciaDistribuicao` em
+    Executa `validar_aderencia_distribuicao()` e converte cada `InconsistenciaDistribuicao` em
     `core.Inconsistencia(origem='writer', ...)`. Isola a forma interna
     do validador do contrato estável do pipeline.
     """
@@ -113,7 +113,7 @@ def validar_para_dominio(
                 f"diff={inc.diff:.4f}"
             ),
         )
-        for inc in validar(bd_records, medicao_snapshot)
+        for inc in validar_aderencia_distribuicao(bd_records, medicao_snapshot)
     ]
 
 
@@ -122,8 +122,8 @@ def validar_para_dominio(
 # ---------------------------------------------------------------------------
 
 from collections import Counter  # noqa: E402
-from datetime import datetime     # noqa: E402
-from pathlib import Path          # noqa: E402
+from datetime import datetime  # noqa: E402
+from pathlib import Path  # noqa: E402
 
 _DIR_SAIDA = Path('data/saida')
 

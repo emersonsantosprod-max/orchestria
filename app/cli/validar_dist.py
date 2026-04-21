@@ -17,7 +17,7 @@ from app.db import (
     registrar_medicao,
 )
 from app.paths import db_path
-from app.validar_distribuicao import gerar_relatorio, validar, _salvar_relatorio
+from app.validar_distribuicao import _salvar_relatorio, gerar_relatorio, validar_aderencia_distribuicao
 
 
 def cmd_registrar_bd(path_str: str, conn) -> int:
@@ -56,7 +56,7 @@ def cmd_validar(conn) -> int:
 
     bd_records = obter_bd(conn)
     medicao_records = obter_medicao(conn)
-    inconsistencias = validar(bd_records, medicao_records)
+    inconsistencias = validar_aderencia_distribuicao(bd_records, medicao_records)
 
     bd_pares = {(r['funcao'], r['md_cobranca']) for r in bd_records}
     datas = {r['data'] for r in medicao_records}

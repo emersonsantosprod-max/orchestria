@@ -1,7 +1,8 @@
-import os
-import sys
-import platform
+import contextlib
 import ctypes
+import os
+import platform
+import sys
 import threading
 import tkinter as tk
 import tkinter.font as tkfont
@@ -25,9 +26,7 @@ app_path = os.path.join(base_path, "app")
 if app_path not in sys.path:
     sys.path.append(app_path)
 
-from app.pipeline import processar, salvar_relatorio_inconsistencias
 from app import db
-from app.loaders import carregar_medicao_hr
 from app.errors import (
     ArquivoAbertoError,
     ArquivoNaoEncontradoError,
@@ -35,11 +34,17 @@ from app.errors import (
     ConversaoArquivoError,
     PlanilhaInvalidaError,
 )
-from app.validar_distribuicao import validar, gerar_relatorio, _salvar_relatorio
+from app.loaders import carregar_medicao_hr
+from app.pipeline import executar_pipeline, salvar_relatorio_inconsistencias
+from app.validar_distribuicao import _salvar_relatorio, gerar_relatorio, validar_aderencia_distribuicao
 from app.validar_horas import (
-    validar as _validar_hr,
-    gerar_relatorio as _gerar_relatorio_hr,
     _salvar_relatorio as _salvar_relatorio_hr,
+)
+from app.validar_horas import (
+    gerar_relatorio as _gerar_relatorio_hr,
+)
+from app.validar_horas import (
+    validar_horas_trabalhadas as _validar_hr,
 )
 
 
@@ -121,7 +126,7 @@ def _executar_fluxo(titulo_log, prompts, montar_kwargs):
         try:
             db.popular_bd_se_vazio(conn)
             imprimir_log("Fase 1/3: Lendo arquivos (modo otimizado)...\n")
-            resultado = processar(
+            resultado = executar_pipeline(
                 **montar_kwargs(caminhos),
                 conn=conn,
                 validar_distribuicao=False,
@@ -240,7 +245,7 @@ def iniciar_validacao():
             medicao_records  = db.obter_medicao(conn)
             conn.close()
 
-            inconsistencias = validar(bd_records, medicao_records)
+            inconsistencias = validar_aderencia_distribuicao(bd_records, medicao_records)
 
             bd_pares = {(r['funcao'], r['md_cobranca']) for r in bd_records}
             datas    = {r['data'] for r in medicao_records}
@@ -381,10 +386,8 @@ if platform.system() == "Windows":
     for _fn in ("IBMPlexSans-Regular.ttf", "IBMPlexSans-SemiBold.ttf"):
         _fp = os.path.join(base_path, "design", "fonts", _fn)
         if os.path.exists(_fp):
-            try:
+            with contextlib.suppress(Exception):
                 ctypes.windll.gdi32.AddFontResourceExW(_fp, 0x10, 0)
-            except Exception:
-                pass
 
 janela.update_idletasks()
 _familia = "IBM Plex Sans" if "IBM Plex Sans" in tkfont.families() else "Segoe UI"

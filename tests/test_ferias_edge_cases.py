@@ -39,7 +39,7 @@ def test_intersecao_parcial_mes_anterior():
     sg_fun = {('95585', '01/04/2026'): 'ELET-IV',
               ('95585', '02/04/2026'): 'ELET-IV'}
 
-    atus, incs = ferias.processar_ferias(
+    atus, incs = ferias.gerar_updates_ferias(
         dados, base_cob, medicao_por_mat, md_cob, sg_fun,
         date(2026, 4, 1), _col_map_minimo(),
     )
@@ -62,7 +62,7 @@ def test_periodo_fora_do_mes_skip_silencioso():
         'p2': None, 's2': None,
     }]
     medicao_por_mat = {'111': [(date(2026, 4, 1), '01/04/2026', [10])]}
-    atus, incs = ferias.processar_ferias(
+    atus, incs = ferias.gerar_updates_ferias(
         dados, {}, medicao_por_mat, {}, {},
         date(2026, 4, 1), _col_map_minimo()
     )
@@ -81,7 +81,7 @@ def test_ferias_sem_aprovacao():
         'p1': '01/04/2026 a 03/04/2026', 's1': 'Pendente',
         'p2': '01/05/2026 a 03/05/2026', 's2': 'Negado',
     }]
-    atus, incs = ferias.processar_ferias(
+    atus, incs = ferias.gerar_updates_ferias(
         dados, {}, {}, {}, {}, date(2026, 4, 1), _col_map_minimo()
     )
     assert atus == []
@@ -104,7 +104,7 @@ def test_periodo_invalido(periodo):
         'p1': periodo, 's1': 'Aprovado',
         'p2': None, 's2': None,
     }]
-    atus, incs = ferias.processar_ferias(
+    atus, incs = ferias.gerar_updates_ferias(
         dados, {}, {}, {}, {}, date(2026, 4, 1), _col_map_minimo()
     )
     assert atus == []
@@ -123,7 +123,7 @@ def test_matricula_nao_encontrada_uma_vez():
         'p1': '01/04/2026 a 30/04/2026', 's1': 'Aprovado',
         'p2': None, 's2': None,
     }]
-    atus, incs = ferias.processar_ferias(
+    atus, incs = ferias.gerar_updates_ferias(
         dados, {}, {}, {}, {}, date(2026, 4, 1), _col_map_minimo()
     )
     assert atus == []
@@ -150,7 +150,7 @@ def test_sg_dedup_por_matricula():
     }
     md_cob = {('111', f'{d:02d}/04/2026'): 'CENTRAL' for d in range(1, 6)}
     sg_fun = {('111', f'{d:02d}/04/2026'): 'X-INEXISTENTE' for d in range(1, 6)}
-    atus, incs = ferias.processar_ferias(
+    atus, incs = ferias.gerar_updates_ferias(
         dados, {}, medicao_por_mat, md_cob, sg_fun,
         date(2026, 4, 1), _col_map_minimo()
     )
@@ -170,7 +170,7 @@ def test_pre_flight_colunas_obrigatorias(col_ausente):
     del col_map[col_ausente]
 
     with pytest.raises(RuntimeError, match='colunas obrigatórias'):
-        ferias.processar_ferias([], {}, {}, {}, {}, date(2026, 4, 1), col_map)
+        ferias.gerar_updates_ferias([], {}, {}, {}, {}, date(2026, 4, 1), col_map)
 
 
 # ---------------------------------------------------------------------------
@@ -188,7 +188,7 @@ def test_md_cobranca_direto_com_observacao():
     md_cob = {('111', '01/04/2026'): 'PACOTE'}
     sg_fun = {('111', '01/04/2026'): 'ELET-IV'}
 
-    atus, incs = ferias.processar_ferias(
+    atus, incs = ferias.gerar_updates_ferias(
         dados, {}, medicao_por_mat, md_cob, sg_fun,
         date(2026, 4, 1), _col_map_minimo(),
     )

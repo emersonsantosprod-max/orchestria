@@ -23,15 +23,14 @@ import os
 import sqlite3
 from dataclasses import dataclass, field
 
-from app import atestado, db, ferias, loaders, treinamento, excel as writer
+from app import atestado, db, ferias, loaders, treinamento
+from app import excel as writer
 from app import validar_distribuicao as vdist
 from app.errors import (
     ArquivoAbertoError,
     ArquivoNaoEncontradoError,
     AutomacaoError,
-    PlanilhaInvalidaError,
 )
-
 
 # ---------------------------------------------------------------------------
 # Resultado
@@ -68,7 +67,7 @@ def _mes_referencia(medicao_por_matricula: dict):
 # Entry point
 # ---------------------------------------------------------------------------
 
-def processar(
+def executar_pipeline(
     caminho_medicao: str,
     caminho_treinamentos: str = '',
     caminho_classificacao: str = '',
@@ -140,7 +139,7 @@ def processar(
     updates_treinamento = []
     inconst_trein = []
     if treinamento_ativo:
-        updates_treinamento, inconst_trein = treinamento.processar_treinamentos(
+        updates_treinamento, inconst_trein = treinamento.gerar_updates_treinamento(
             dados, tabela, obs_existentes
         )
 
@@ -148,7 +147,7 @@ def processar(
     inconst_ferias = []
     if ferias_ativo:
         mes_ref = _mes_referencia(medicao_por_matricula)
-        updates_ferias, inconst_ferias = ferias.processar_ferias(
+        updates_ferias, inconst_ferias = ferias.gerar_updates_ferias(
             dados_ferias,
             base_cobranca,
             medicao_por_matricula,

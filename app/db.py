@@ -14,7 +14,7 @@ Regras:
     referenciar Path('data/automacao.db') diretamente neste módulo.
 
 NOTE: registrar_medicao / obter_medicao servem apenas ao fluxo CLI/GUI de
-Validação autônoma. pipeline.processar() nunca usa essas funções —
+Validação autônoma. pipeline.executar_pipeline() nunca usa essas funções —
 medição é sempre ephemeral dentro do pipeline.
 """
 

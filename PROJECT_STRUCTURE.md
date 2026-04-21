@@ -12,11 +12,11 @@ app/db.py → SQLite: registrar_bd/medicao, obter_*, popular_bd_se_vazio (bootst
 app/paths.py → resolução determinística de caminhos (dev vs PyInstaller frozen). SSOT para `db_path()` e xlsx empacotado.
 app/excel.py → Excel I/O: read entrada/, write saida/ via `salvar_via_zip`; não importa módulos de domínio
 app/pipeline.py → orquestração pura: load → process → apply → (opcional) validar_distribuicao. Recebe `conn` via DI; não executa bootstrap.
-app/main.py → CLI entry-point; argparse com subcomandos: `run` (default) | `normalizar` | `validar-dist` | `validar-consist`. Executa bootstrap antes de `pipeline.processar()`.
+app/main.py → CLI entry-point; argparse com subcomandos: `executar` (default) | `normalizar` | `validar-dist` | `validar-consist`. Executa bootstrap antes de `pipeline.executar_pipeline()`.
 app/cli/normalizar.py → normaliza distribuição contratual; produz `data/saida/distribuicao_contratual_normalizada.xlsx`.
 app/cli/validar_dist.py → registra BD/Medição no SQLite e gera relatório de validação.
 app/cli/validar_hr.py → lê medicao_base.xlsx, chama validar_horas, grava relatório em data/saida/.
 app/cli/validar_consist.py → compara planilha original × processada (auditor autônomo).
-ui/gui.py → desktop GUI (tkinter); PyInstaller `AutomacaoMedicao.spec`. Executa bootstrap antes de chamar `pipeline.processar()`.
+ui/gui.py → desktop GUI (tkinter); PyInstaller `AutomacaoMedicao.spec`. Executa bootstrap antes de chamar `pipeline.executar_pipeline()`.
 assets/distribuicao_contratual_normalizada.xlsx → source-of-truth versionado (repo privado); empacotada no bundle via PyInstaller `datas=`; source do bootstrap inicial do SQLite.
 data/automacao.db → SQLite gravável em `<exe_dir>/data/` (frozen) ou raiz do projeto (dev); resolvido via `app.paths.db_path()`.

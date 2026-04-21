@@ -9,19 +9,20 @@ Saída:
     Relatório estruturado em 4 etapas impresso no stdout.
 """
 
-import sys
-import re
 import os
-from datetime import datetime, time as dt_time
+import re
+import sys
 from collections import Counter, defaultdict
+from datetime import datetime
+from datetime import time as dt_time
 
 import openpyxl
 
 # ─────────────────────────────────────────────────────────────────────────────
 # CAMINHOS
 # ─────────────────────────────────────────────────────────────────────────────
-
 from app.paths import _project_root  # type: ignore
+
 _BASE_DIR = str(_project_root())
 
 ARQUIVO_ORIGINAL   = os.path.join(_BASE_DIR, 'data', 'entrada', 'Medição Geral Março.xlsx')

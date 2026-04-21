@@ -13,10 +13,10 @@ from __future__ import annotations
 
 from datetime import timedelta
 
-from app.core import Update, parse_data_obj, normalizar_matricula
+from app.core import Update, normalizar_matricula, parse_data_obj
 
 
-def processar_atestados(dados: list) -> tuple:
+def gerar_updates_atestado(dados: list) -> tuple:
     """
     Expande períodos de atestado em registros diários.
 

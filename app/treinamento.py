@@ -29,7 +29,6 @@ from app.core import (
     normalizar_matricula,
 )
 
-
 # ---------------------------------------------------------------------------
 # Regexes pré-compiladas
 # ---------------------------------------------------------------------------
@@ -148,7 +147,7 @@ def montar_observacao(lista_treinamentos: list, observacao_existente) -> str:
 # Processamento principal
 # ---------------------------------------------------------------------------
 
-def processar_treinamentos(
+def gerar_updates_treinamento(
     dados: list,
     tabela_classificacao: dict,
     observacoes_existentes: dict = None,

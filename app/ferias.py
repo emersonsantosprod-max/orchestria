@@ -31,7 +31,6 @@ from datetime import date, timedelta
 
 from app.core import Update, inconsistencia, normalizar_matricula
 
-
 _RE_PERIODO = re.compile(
     r'(\d{2})/(\d{2})/(\d{4})\s*a\s*(\d{2})/(\d{2})/(\d{4})$'
 )
@@ -100,7 +99,7 @@ def _classificar(md_cob, sg_fun, base_cobranca):
 # Processamento principal
 # ---------------------------------------------------------------------------
 
-def processar_ferias(
+def gerar_updates_ferias(
     dados_ferias,
     base_cobranca,
     medicao_por_matricula,

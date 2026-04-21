@@ -16,10 +16,8 @@ from __future__ import annotations
 
 import os
 from collections import defaultdict
-from typing import Optional
 
 import openpyxl
-
 
 # ---------------------------------------------------------------------------
 # Tipos de inconsistência
@@ -56,7 +54,7 @@ def normalize_area(raw: str) -> str:
 
 def parse_distribuicao_cols(
     headers: tuple,
-) -> tuple[dict[int, tuple[str, Optional[str]]], list[dict]]:
+) -> tuple[dict[int, tuple[str, str | None]], list[dict]]:
     """
     Classifica cada coluna como distribuição ou skip com base no header.
 
@@ -64,7 +62,7 @@ def parse_distribuicao_cols(
       col_map:  {col_index: (md_cobranca, area)}
       warnings: list of inconsistency dicts
     """
-    col_map: dict[int, tuple[str, Optional[str]]] = {}
+    col_map: dict[int, tuple[str, str | None]] = {}
     warnings: list[dict] = []
     seen_keys: dict[tuple, int] = {}
 
@@ -76,7 +74,7 @@ def parse_distribuicao_cols(
             continue
 
         if h_str == 'CENTRAL':
-            key: tuple[str, Optional[str]] = ('CENTRAL', None)
+            key: tuple[str, str | None] = ('CENTRAL', None)
         elif h_str == 'ADM-B':
             key = ('ADM-B', None)
         elif h_str == 'ANALITICA':
@@ -112,7 +110,7 @@ def parse_distribuicao_cols(
         col_map[i] = key
 
     # Invariant: CENTRAL e ADM-B nunca têm area
-    for idx, (md, area) in col_map.items():
+    for (md, area) in col_map.values():
         if md in ('CENTRAL', 'ADM-B') and area is not None:
             raise ValueError(
                 f"ERRO_CRITICO: coluna '{md}' mapeada com area='{area}' — invariante violado"
@@ -141,10 +139,10 @@ def carregar_e_normalizar(
     ws = wb.active
 
     all_warnings: list[dict] = []
-    col_map: dict[int, tuple[str, Optional[str]]] = {}
-    sigla_col: Optional[int] = None
-    funcao_col: Optional[int] = None
-    atual_col: Optional[int] = None
+    col_map: dict[int, tuple[str, str | None]] = {}
+    sigla_col: int | None = None
+    funcao_col: int | None = None
+    atual_col: int | None = None
     header_found = False
     header_count = 0
 
@@ -274,7 +272,7 @@ def carregar_e_normalizar(
 # STEP 4: validação
 # ---------------------------------------------------------------------------
 
-def validar(
+def validar_distribuicao_cobranca(
     normalized: list[dict],
     raw_sums: dict[str, float],
     atual: dict[str, float],

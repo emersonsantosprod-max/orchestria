@@ -2,7 +2,6 @@ import os
 import tempfile
 
 import openpyxl
-import pytest
 
 from app.distribuicao_contratual import (
     AVISO_COLUNA_DESCONHECIDA,
@@ -13,9 +12,8 @@ from app.distribuicao_contratual import (
     carregar_e_normalizar,
     normalize_area,
     parse_distribuicao_cols,
-    validar,
+    validar_distribuicao_cobranca,
 )
-
 
 # ---------------------------------------------------------------------------
 # normalize_area
@@ -188,23 +186,23 @@ def test_normalizar_two_functions():
 
 def test_validar_total_match():
     normalized = [{'funcao': 'ELET-I', 'md_cobranca': 'CENTRAL', 'area': None, 'quantidade': 5}]
-    result = validar(normalized, {'ELET-I': 5.0}, {})
+    result = validar_distribuicao_cobranca(normalized, {'ELET-I': 5.0}, {})
     assert not any(i['tipo'] == ERRO_TOTAL for i in result)
 
 
 def test_validar_total_mismatch():
     normalized = [{'funcao': 'ELET-I', 'md_cobranca': 'CENTRAL', 'area': None, 'quantidade': 5}]
-    result = validar(normalized, {'ELET-I': 7.0}, {})
+    result = validar_distribuicao_cobranca(normalized, {'ELET-I': 7.0}, {})
     assert any(i['tipo'] == ERRO_TOTAL for i in result)
 
 
 def test_validar_discrepancia_atual():
     normalized = [{'funcao': 'ELET-I', 'md_cobranca': 'CENTRAL', 'area': None, 'quantidade': 5}]
-    result = validar(normalized, {'ELET-I': 5.0}, {'ELET-I': 8.0})
+    result = validar_distribuicao_cobranca(normalized, {'ELET-I': 5.0}, {'ELET-I': 8.0})
     assert any(i['tipo'] == AVISO_DISCREPANCIA_ATUAL for i in result)
 
 
 def test_validar_no_discrepancia_quando_atual_ausente():
     normalized = [{'funcao': 'ELET-I', 'md_cobranca': 'CENTRAL', 'area': None, 'quantidade': 5}]
-    result = validar(normalized, {'ELET-I': 5.0}, {})
+    result = validar_distribuicao_cobranca(normalized, {'ELET-I': 5.0}, {})
     assert not any(i['tipo'] == AVISO_DISCREPANCIA_ATUAL for i in result)

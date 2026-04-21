@@ -28,6 +28,7 @@ dependencies = [
 dev = [
     "pytest==9.0.3",
     "Pygments==2.20.0",
+    "ruff==0.14.3",
 ]
 build = [
     "pyinstaller==6.19.0",
@@ -42,3 +43,20 @@ packages = ["app", "app.cli", "ui"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+extend-exclude = ["build", "dist", "venv", ".venv", "__pycache__"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM"]
+ignore = [
+    "E501",
+    "B008",
+    "SIM108",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["E402", "SIM115"]
+"ui/gui.py" = ["E402"]

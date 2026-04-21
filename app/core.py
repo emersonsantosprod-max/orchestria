@@ -21,8 +21,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Literal, Optional
-
+from typing import Literal
 
 # ---------------------------------------------------------------------------
 # Regexes compartilhadas
@@ -156,11 +155,11 @@ class Update:
     tipo: Tipo
     matricula: str
     data: str
-    observacao: Optional[str] = None
-    desconto_min: Optional[int] = None
-    situacao: Optional[str] = None
+    observacao: str | None = None
+    desconto_min: int | None = None
+    situacao: str | None = None
     sobrescrever_obs: bool = False
-    row: Optional[int] = None
+    row: int | None = None
 
     def __post_init__(self):
         if self.tipo not in _TIPOS_VALIDOS:

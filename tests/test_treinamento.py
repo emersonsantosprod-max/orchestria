@@ -1,5 +1,7 @@
 import pytest
+
 from app import treinamento
+
 
 def test_classificar_treinamento():
     tabela = {'TR-A': 'remunerado', 'TR-B': 'nao_remunerado'}
@@ -28,7 +30,7 @@ def test_expandir_datas():
     assert treinamento.expandir_datas('18/03/2026') == ['18/03/2026']
     assert treinamento.expandir_datas('18 À 19/03/2026') == ['18/03/2026', '19/03/2026']
     assert treinamento.expandir_datas('18 À 20/03/2026') == ['18/03/2026', '19/03/2026', '20/03/2026']
-    
+
     with pytest.raises(ValueError):
         treinamento.expandir_datas('Data Invalida')
 
@@ -52,7 +54,7 @@ def test_processar_fluxo_simples():
         'treinamento': 'TR', 'data': '18/03/2026', 'carga': '2H'
     }]
     tabela = {'TR': 'nao_remunerado'}
-    atualizacoes, erros = treinamento.processar_treinamentos(dados, tabela, {})
+    atualizacoes, erros = treinamento.gerar_updates_treinamento(dados, tabela, {})
 
     assert len(erros) == 0
     assert len(atualizacoes) == 1
@@ -64,13 +66,13 @@ def test_carga_zero_gera_erro_de_carga():
     dados = [{'linha': 1, 'matricula': '123', 'nome': 'A',
               'treinamento': 'TR', 'data': '18/03/2026', 'carga': '0H'}]
     tabela = {'TR': 'nao_remunerado'}
-    atualizacoes, erros = treinamento.processar_treinamentos(dados, tabela, {})
+    atualizacoes, erros = treinamento.gerar_updates_treinamento(dados, tabela, {})
     assert len(atualizacoes) == 0
     assert len(erros) == 1
     assert erros[0].erro == 'erro de carga'
 
 def test_observacao_usa_nome_em_maiusculo():
-    atualizacoes, erros = treinamento.processar_treinamentos(
+    atualizacoes, erros = treinamento.gerar_updates_treinamento(
         [{'linha': 1, 'matricula': '123', 'nome': 'A',
           'treinamento': 'nr-10', 'data': '18/03/2026', 'carga': '2H'}],
         {'NR-10': 'nao_remunerado'},

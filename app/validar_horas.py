@@ -31,7 +31,7 @@ class InconsistenciaHr:
     tipo_inconsistencia: str
 
 
-def validar(registros: list[dict]) -> list[InconsistenciaHr]:
+def validar_horas_trabalhadas(registros: list[dict]) -> list[InconsistenciaHr]:
     result: list[InconsistenciaHr] = []
     for r in registros:
         v = r['hr_trabalhadas']
@@ -101,8 +101,8 @@ def gerar_relatorio(
     add(f"  Arquivo de medição : {caminho_medicao}")
     add(f"  Linhas de dados    : {n_linhas}")
     add(f"  Limite configurado : 9h10min ({LIMITE_HH:.4f}h)")
-    add(f"  Coluna analisada   : col 19 (Hr Trabalhadas)")
-    add(f"  Chave de linha     : col 1 (RE/Matrícula) + col 0 (Data)")
+    add("  Coluna analisada   : col 19 (Hr Trabalhadas)")
+    add("  Chave de linha     : col 1 (RE/Matrícula) + col 0 (Data)")
     add(f"  Gerado em          : {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}")
     add('')
     add('  Modelo de validação:')
@@ -110,7 +110,7 @@ def gerar_relatorio(
     add(f"      valor < 0            → {ERRO_HORAS_NEGATIVAS}")
     add(f"      valor > {LIMITE_HH:.4f}  → {ERRO_HORAS_EXCESSO}")
     add(f"      0 ≤ valor ≤ {LIMITE_HH:.4f}  → válido")
-    add(f"      valor = None (vazio) → ignorado")
+    add("      valor = None (vazio) → ignorado")
     add('')
 
     add(SEP_SECAO)

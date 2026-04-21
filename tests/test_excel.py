@@ -1,5 +1,5 @@
-import pytest
 import openpyxl
+import pytest
 
 from app import excel as writer
 from app.core import Update

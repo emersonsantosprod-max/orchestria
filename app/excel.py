@@ -6,23 +6,31 @@ Normalização e dataclasses de contrato vivem em app/core.py.
 """
 
 import os
-import zipfile
 import unicodedata
+import zipfile
 from xml.etree import ElementTree as ET
 
 import openpyxl
 
 from app.core import (
-    Update,
     converter_desconto_para_minutos as _core_converter_desconto_para_minutos,
+)
+from app.core import (
     converter_minutos_para_hhmmss as _core_converter_minutos_para_hhmmss,
+)
+from app.core import (
     deduplicar_observacao,
     inconsistencia,
+)
+from app.core import (
     normalizar_data as _core_normalizar_data,
+)
+from app.core import (
     normalizar_matricula as _core_normalizar_matricula,
+)
+from app.core import (
     parse_data_obj as _core_parse_data_obj,
 )
-
 
 # ---------------------------------------------------------------------------
 # Namespaces OOXML
@@ -482,7 +490,7 @@ def salvar_via_zip(
             for info, data in outros:
                 z_new.writestr(info, data)
             z_new.writestr(sheet_path, new_xml)
-    except PermissionError:
+    except PermissionError as err:
         raise PermissionError(
             f"Erro ao salvar: feche o arquivo '{os.path.basename(dst)}' antes de prosseguir."
-        )
+        ) from err

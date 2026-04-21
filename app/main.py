@@ -1,5 +1,5 @@
 """
-main.py — Entry point CLI. Wrapper fino sobre app.service.processar.
+main.py — Entry point CLI. Wrapper fino sobre app.pipeline.executar_pipeline.
 
 Toda a orquestração (loaders + pipeline 3 fases) vive em app/pipeline.py.
 Este módulo só resolve caminhos default, interpreta flags opt-in e formata
@@ -11,7 +11,8 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app import pipeline as service, db
+from app import db
+from app import pipeline as service
 
 # Re-exports mantidos para consumidores existentes (GUI, testes).
 salvar_relatorio_inconsistencias = service.salvar_relatorio_inconsistencias
@@ -39,21 +40,14 @@ def definir_caminhos():
 # Entry point (mantém assinatura legada para GUI + testes)
 # ---------------------------------------------------------------------------
 
-def run(
+def executar_medicao(
     c_medicao_custom=None,
     c_trein_custom=None,
     c_class_custom=None,
     c_ferias_custom=None,
     c_base_cob_custom=None,
 ):
-    """
-    Wrapper legado: resolve caminhos default e delega a service.processar.
-
-    Opt-in:
-      - Treinamento: ativo se c_trein_custom + c_class_custom ou, na ausência
-        de qualquer custom (CLI default), mantém comportamento tradicional.
-      - Férias: ativo se c_ferias_custom + c_base_cob_custom forem fornecidos.
-    """
+    """Resolve caminhos default e delega para pipeline.executar_pipeline (entrada da GUI/tests)."""
     (c_med_pad, c_trein_pad, c_class_pad, c_saida_pad,
      c_ferias_pad, c_base_cob_pad) = definir_caminhos()
 
@@ -83,7 +77,7 @@ def run(
     conn = db.conectar()
     try:
         db.popular_bd_se_vazio(conn)
-        resultado = service.processar(
+        resultado = service.executar_pipeline(
             caminho_medicao=c_medicao,
             caminho_treinamentos=c_treinamentos,
             caminho_classificacao=c_classificacao,
@@ -119,10 +113,10 @@ def exibir_resumo(resultado):
             )
 
 
-def _cmd_run() -> int:
+def _comando_executar_medicao() -> int:
     print('Iniciando Automação de Treinamentos...\n')
     try:
-        resultado = run()
+        resultado = executar_medicao()
         exibir_resumo(resultado)
         return 0
     except RuntimeError as e:
@@ -137,7 +131,7 @@ def main():
     import argparse
     parser = argparse.ArgumentParser(prog='automacao')
     sub = parser.add_subparsers(dest='cmd')
-    sub.add_parser('run', help='Pipeline completo (default)')
+    sub.add_parser('executar', help='Pipeline completo (default)')
     sub.add_parser('normalizar', help='Normaliza distribuição contratual')
     p_vd = sub.add_parser('validar-dist', help='Valida BD vs Medição')
     from app.cli.validar_dist import build_parser as _build_vd
@@ -148,9 +142,9 @@ def main():
     _build_vh(p_vh)
 
     args = parser.parse_args()
-    cmd = args.cmd or 'run'
-    if cmd == 'run':
-        sys.exit(_cmd_run())
+    cmd = args.cmd or 'executar'
+    if cmd == 'executar':
+        sys.exit(_comando_executar_medicao())
     if cmd == 'normalizar':
         from app.cli.normalizar import main as _m
         sys.exit(_m())

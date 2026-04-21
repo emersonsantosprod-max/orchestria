@@ -24,7 +24,7 @@ from app.distribuicao_contratual import (
     ERRO_TOTAL,
     carregar_e_normalizar,
     exportar_normalizado,
-    validar,
+    validar_distribuicao_cobranca,
 )
 from app.paths import _project_root  # type: ignore
 
@@ -132,7 +132,7 @@ def main() -> int:
     except ValueError as e:
         print(f"[ERRO CRÍTICO] {e}")
         return 1
-    validation_warnings = validar(normalized, raw_sums, atual)
+    validation_warnings = validar_distribuicao_cobranca(normalized, raw_sums, atual)
     all_inc = early_warnings + validation_warnings
     exportar_normalizado(normalized, ARQUIVO_SAIDA)
     imprimir_relatorio(all_inc, ARQUIVO_ENTRADA, ARQUIVO_SAIDA, len(normalized))

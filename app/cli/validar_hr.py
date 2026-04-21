@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 from app.loaders import carregar_medicao_hr
-from app.validar_horas import validar, gerar_relatorio, _salvar_relatorio
+from app.validar_horas import _salvar_relatorio, gerar_relatorio, validar_horas_trabalhadas
 
 DEFAULT_MEDICAO = 'data/entrada/medicao_base.xlsx'
 
@@ -19,7 +19,7 @@ def cmd_validar(path: Path) -> int:
         return 1
 
     registros, n_linhas = carregar_medicao_hr(str(path))
-    inconsistencias = validar(registros)
+    inconsistencias = validar_horas_trabalhadas(registros)
 
     conteudo = gerar_relatorio(inconsistencias, str(path.resolve()), n_linhas)
     caminho = _salvar_relatorio(conteudo)

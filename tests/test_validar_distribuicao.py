@@ -1,6 +1,4 @@
-import sqlite3
 import tempfile
-from pathlib import Path
 
 import openpyxl
 import pytest
@@ -17,10 +15,8 @@ from app.validar_distribuicao import (
     ERRO_EXCESSO_RATEIO,
     ERRO_INSUFICIENCIA_RATEIO,
     ERRO_LINHA_AUSENTE,
-    InconsistenciaDistribuicao,
-    validar,
+    validar_aderencia_distribuicao,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -182,7 +178,7 @@ def test_validar_sem_inconsistencias():
         ('01/04/2026', 'AUDITOR', 'CENTRAL', 1.0),
         ('01/04/2026', 'AUDITOR', 'CENTRAL', 1.0),
     ])
-    result = validar(bd, med)
+    result = validar_aderencia_distribuicao(bd, med)
     assert result == []
 
 
@@ -192,7 +188,7 @@ def test_validar_erro_insuficiencia_rateio():
         ('01/04/2026', 'AUDITOR', 'CENTRAL', 1.0),
         ('01/04/2026', 'AUDITOR', 'CENTRAL', 1.0),
     ])
-    result = validar(bd, med)
+    result = validar_aderencia_distribuicao(bd, med)
     assert len(result) == 1
     inc = result[0]
     assert inc.tipo_inconsistencia == ERRO_INSUFICIENCIA_RATEIO
@@ -208,7 +204,7 @@ def test_validar_erro_excesso_rateio():
         ('01/04/2026', 'AUDITOR', 'CENTRAL', 1.0),
         ('01/04/2026', 'AUDITOR', 'CENTRAL', 1.0),
     ])
-    result = validar(bd, med)
+    result = validar_aderencia_distribuicao(bd, med)
     assert len(result) == 1
     assert result[0].tipo_inconsistencia == ERRO_EXCESSO_RATEIO
     assert result[0].diff == pytest.approx(1.0)
@@ -225,7 +221,7 @@ def test_validar_erro_linha_ausente_md_cobranca():
         ('01/04/2026', 'AUDITOR', 'CENTRAL', 1.0),
         # AUDITOR/BREAKDOWN ausente, mas AUDITOR existe no dia
     ])
-    result = validar(bd, med)
+    result = validar_aderencia_distribuicao(bd, med)
     assert len(result) == 1
     inc = result[0]
     assert inc.tipo_inconsistencia == ERRO_LINHA_AUSENTE
@@ -241,7 +237,7 @@ def test_validar_sem_erro_funcao_totalmente_ausente():
         ('01/04/2026', 'INSPETOR', 'HD', 1.0),
         # AUDITOR ausente no dia; INSPETOR não tem contrato BD
     ])
-    result = validar(bd, med)
+    result = validar_aderencia_distribuicao(bd, med)
     assert result == []
 
 
@@ -254,7 +250,7 @@ def test_validar_sem_data_sintetica():
         ('02/04/2026', 'AUDITOR', 'CENTRAL', 1.0),
         ('02/04/2026', 'AUDITOR', 'CENTRAL', 1.0),
     ])
-    result = validar(bd, med)
+    result = validar_aderencia_distribuicao(bd, med)
     assert result == []  # 02/04 match; 01/04 não existe → sem inconsistência
 
 
@@ -267,7 +263,7 @@ def test_validar_bd_agrega_area():
     ])
     total = 0.35 + 0.35 + 0.45  # 1.15
     med = _med([('01/04/2026', 'ASS-ADM', 'BREAKDOWN', total)])
-    result = validar(bd, med)
+    result = validar_aderencia_distribuicao(bd, med)
     assert result == []
 
 
@@ -280,7 +276,7 @@ def test_validar_precisao_float():
         ('01/04/2026', 'FUNC', 'MD', 0.1),
         ('01/04/2026', 'FUNC', 'MD', 0.1),
     ])
-    result = validar(bd, med)
+    result = validar_aderencia_distribuicao(bd, med)
     assert result == []
 
 
@@ -296,7 +292,7 @@ def test_validar_ordenacao_deterministica():
         ('01/04/2026', 'ZULTO',    'CENTRAL', 1.0),
         ('02/04/2026', 'AARDVARK', 'CENTRAL', 1.0),
     ])
-    result = validar(bd, med)
+    result = validar_aderencia_distribuicao(bd, med)
     keys = [(i.data, i.funcao) for i in result]
     assert keys == sorted(keys)
 
@@ -309,7 +305,7 @@ def test_validar_multiplas_datas_independentes():
         ('02/04/2026', 'AUDITOR', 'CENTRAL', 1.0),   # falta 1 no dia 02
         ('02/04/2026', 'AUDITOR', 'CENTRAL', 1.0),   # ainda falta 1 → mas soma a 2 → OK
     ])
-    result = validar(bd, med)
+    result = validar_aderencia_distribuicao(bd, med)
     # 01/04 → realizado=1 < esperado=2 → ERRO_INSUFICIENCIA_RATEIO
     # 02/04 → realizado=2 = esperado=2 → OK
     assert len(result) == 1

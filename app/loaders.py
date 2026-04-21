@@ -7,6 +7,7 @@ Não contém lógica de negócio nem conhecimento da ordem do pipeline.
 
 from __future__ import annotations
 
+import contextlib
 import os
 import tempfile
 import unicodedata
@@ -109,8 +110,8 @@ def carregar_dados_atestado(caminho: str) -> list:
         try:
             wb_tmp = openpyxl.load_workbook(caminho_convertido, read_only=True, data_only=True)
             wb_tmp.close()
-        except Exception:
-            raise ValueError("Falha ao converter arquivo .xls para .xlsx")
+        except Exception as err:
+            raise ValueError("Falha ao converter arquivo .xls para .xlsx") from err
         caminho = caminho_convertido
 
     def _norm(s: str) -> str:
@@ -187,10 +188,8 @@ def carregar_dados_atestado(caminho: str) -> list:
         return dados
     finally:
         if caminho_convertido:
-            try:
+            with contextlib.suppress(Exception):
                 os.remove(caminho_convertido)
-            except Exception:
-                pass
 
 
 def carregar_medicao_hr(caminho: str) -> tuple[list[dict], int]:

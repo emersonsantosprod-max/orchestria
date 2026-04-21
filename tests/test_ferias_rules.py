@@ -2,7 +2,8 @@
 
 from datetime import date
 
-from app import ferias, excel as writer
+from app import excel as writer
+from app import ferias
 from app.core import Update
 
 
@@ -32,7 +33,7 @@ def test_regressao_ferias_direto_com_observacao():
     md_cob = {('248649', '06/04/2026'): 'ADICIONAL'}
     sg_fun = {('248649', '06/04/2026'): 'SOLD-I'}
 
-    atus, incs = ferias.processar_ferias(
+    atus, incs = ferias.gerar_updates_ferias(
         dados, {}, medicao_por_mat, md_cob, sg_fun,
         date(2026, 4, 1), _col_map_minimo(),
     )
@@ -79,7 +80,7 @@ def test_ferias_sd_emite_observacao_com_sufixo():
     sg_fun = {('111', '01/04/2026'): 'AJUD-CIVIL'}
     base_cob = {'AJUD-CIVIL': 'FÉRIAS S/ DESC'}
 
-    atus, incs = ferias.processar_ferias(
+    atus, incs = ferias.gerar_updates_ferias(
         dados, base_cob, medicao_por_mat, md_cob, sg_fun,
         date(2026, 4, 1), _col_map_minimo(),
     )
@@ -100,7 +101,7 @@ def test_ferias_normal_emite_observacao_sem_sufixo():
     sg_fun = {('111', '01/04/2026'): 'ARTIF'}
     base_cob = {'ARTIF': 'FÉRIAS'}
 
-    atus, _ = ferias.processar_ferias(
+    atus, _ = ferias.gerar_updates_ferias(
         dados, base_cob, medicao_por_mat, md_cob, sg_fun,
         date(2026, 4, 1), _col_map_minimo(),
     )
@@ -126,7 +127,7 @@ def test_rateio_uma_data_multiplas_linhas_atualizadas():
     md_cob = {('111', '01/04/2026'): 'ADICIONAL'}
     sg_fun = {('111', '01/04/2026'): 'X'}
 
-    atus, incs = ferias.processar_ferias(
+    atus, incs = ferias.gerar_updates_ferias(
         dados, {}, medicao_por_mat, md_cob, sg_fun,
         date(2026, 4, 1), _col_map_minimo(),
     )
@@ -157,7 +158,7 @@ def test_observacao_usa_periodo_original_nao_clipped():
     sg_fun = {('111', '01/04/2026'): 'X', ('111', '02/04/2026'): 'X'}
     base_cob = {'X': 'FÉRIAS'}
 
-    atus, _ = ferias.processar_ferias(
+    atus, _ = ferias.gerar_updates_ferias(
         dados, base_cob, medicao_por_mat, md_cob, sg_fun,
         date(2026, 4, 1), _col_map_minimo(),
     )
