@@ -25,6 +25,12 @@ from dataclasses import dataclass, field
 
 from app import atestado, db, ferias, loaders, treinamento, excel as writer
 from app import validar_distribuicao as vdist
+from app.errors import (
+    ArquivoAbertoError,
+    ArquivoNaoEncontradoError,
+    AutomacaoError,
+    PlanilhaInvalidaError,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -120,9 +126,13 @@ def processar(
         wb_ro.close()
 
     except FileNotFoundError as e:
-        raise RuntimeError(f"Arquivo não encontrado: {e}")
+        raise ArquivoNaoEncontradoError(str(e)) from e
+    except PermissionError as e:
+        raise ArquivoAbertoError(str(e)) from e
+    except AutomacaoError:
+        raise
     except Exception as e:
-        raise RuntimeError(f"Erro na fase de leitura: {e}")
+        raise RuntimeError(f"Erro na fase de leitura: {e}") from e
 
     # ------------------------------------------------------------------
     # Fase 2: Processamento
@@ -173,9 +183,11 @@ def processar(
         inconst_escrita = inconst_escrita_base + inconst_atestado_writer
         writer.salvar_via_zip(caminho_medicao, caminho_saida, patches)
     except PermissionError as e:
-        raise RuntimeError(str(e))
+        raise ArquivoAbertoError(str(e)) from e
+    except AutomacaoError:
+        raise
     except Exception as e:
-        raise RuntimeError(f"Erro ao gravar arquivo final: {e}")
+        raise RuntimeError(f"Erro ao gravar arquivo final: {e}") from e
 
     inconst_validacao = []
     if validar_distribuicao:

@@ -25,19 +25,40 @@ app_path = os.path.join(base_path, "app")
 if app_path not in sys.path:
     sys.path.append(app_path)
 
-try:
-    import openpyxl  # noqa: F401
-except ImportError:
-    pass
-
 from app.pipeline import processar, salvar_relatorio_inconsistencias
 from app import db
+from app.loaders import carregar_medicao_hr
+from app.errors import (
+    ArquivoAbertoError,
+    ArquivoNaoEncontradoError,
+    AutomacaoError,
+    ConversaoArquivoError,
+    PlanilhaInvalidaError,
+)
 from app.validar_distribuicao import validar, gerar_relatorio, _salvar_relatorio
 from app.validar_horas import (
     validar as _validar_hr,
     gerar_relatorio as _gerar_relatorio_hr,
     _salvar_relatorio as _salvar_relatorio_hr,
 )
+
+
+def _mensagem_erro(exc: BaseException) -> str:
+    """Converte exceção em mensagem legível para usuário não-técnico."""
+    if isinstance(exc, ArquivoAbertoError):
+        return (
+            "Não foi possível acessar o arquivo. Verifique se ele está "
+            "aberto no Excel e feche antes de tentar novamente."
+        )
+    if isinstance(exc, ArquivoNaoEncontradoError):
+        return f"Arquivo não encontrado: {exc}"
+    if isinstance(exc, PlanilhaInvalidaError):
+        return f"Planilha inválida: {exc}"
+    if isinstance(exc, ConversaoArquivoError):
+        return f"Falha ao converter arquivo: {exc}"
+    if isinstance(exc, AutomacaoError):
+        return str(exc)
+    return f"Erro inesperado: {exc}"
 
 # ---------------------------------------------------------------------------
 # Design tokens (Manserv brand)
@@ -51,11 +72,6 @@ _CONTEUDO    = "#ededed"
 _PAINEL      = "#ffffff"
 _TXT_INV     = "#ffffff"
 _TXT_NAV     = "#e5e5e5"
-
-# Column indices — Frequencia sheet (from app/cli/validar_consist.py)
-_COL_DATA    = 0
-_COL_RE      = 1
-_COL_HR_TRAB = 19
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -114,7 +130,7 @@ def _executar_fluxo(titulo_log, prompts, montar_kwargs):
             imprimir_log("Fase 3/3: Gravando resultados no Excel (isso pode demorar)...\n")
             mostrar_resultado(resultado)
         except Exception as e:
-            imprimir_log(f"\n[ERRO] {str(e)}")
+            imprimir_log(f"\n[ERRO] {_mensagem_erro(e)}\n")
         finally:
             conn.close()
             _habilitar_botoes()
@@ -172,10 +188,17 @@ def iniciar_validacao():
     _desabilitar_botoes()
     area_saida.delete("1.0", "end")
 
-    conn = db.conectar()
-    db.popular_bd_se_vazio(conn)
-    registros = db.obter_registro_arquivos(conn)
-    conn.close()
+    # Bootstrap rápido em main thread apenas para descobrir o que falta.
+    # Conexão é reaberta dentro da worker para todo I/O subsequente.
+    try:
+        conn = db.conectar()
+        db.popular_bd_se_vazio(conn)
+        registros = db.obter_registro_arquivos(conn)
+        conn.close()
+    except Exception as e:
+        imprimir_log(f"\n[ERRO] {_mensagem_erro(e)}\n")
+        _habilitar_botoes()
+        return
 
     caminho_bd = None
     caminho_medicao = None
@@ -236,40 +259,11 @@ def iniciar_validacao():
                 imprimir_log(f"[AVISO] {av}\n")
 
         except Exception as e:
-            imprimir_log(f"\n[ERRO] {str(e)}\n")
+            imprimir_log(f"\n[ERRO] {_mensagem_erro(e)}\n")
         finally:
             _habilitar_botoes()
 
     threading.Thread(target=tarefa, daemon=True).start()
-
-
-def _ler_medicao_hr(path: Path):
-    wb = openpyxl.load_workbook(str(path), read_only=True, data_only=True)
-    try:
-        ws = wb['Frequencia'] if 'Frequencia' in wb.sheetnames else wb['Frequência']
-        registros = []
-        n = 0
-        first = True
-        for row in ws.iter_rows(values_only=True):
-            if first:
-                first = False
-                continue
-            if row is None or all(c is None for c in row):
-                continue
-            n += 1
-            mat_val = row[_COL_RE]      if len(row) > _COL_RE      else None
-            dat_val = row[_COL_DATA]    if len(row) > _COL_DATA    else None
-            hr_val  = row[_COL_HR_TRAB] if len(row) > _COL_HR_TRAB else None
-            matricula = str(mat_val).strip() if mat_val is not None else ''
-            if hasattr(dat_val, 'strftime'):
-                data_str = dat_val.strftime('%d/%m/%Y')
-            else:
-                data_str = str(dat_val).strip() if dat_val is not None else ''
-            hr_trab = float(hr_val) if hr_val is not None else None
-            registros.append({'matricula': matricula, 'data': data_str, 'hr_trabalhadas': hr_trab})
-    finally:
-        wb.close()
-    return registros, n
 
 
 def iniciar_validar_hr():
@@ -286,14 +280,14 @@ def iniciar_validar_hr():
 
     def tarefa():
         try:
-            registros, n_linhas = _ler_medicao_hr(Path(caminho))
+            registros, n_linhas = carregar_medicao_hr(caminho)
             inconsistencias = _validar_hr(registros)
             conteudo = _gerar_relatorio_hr(inconsistencias, str(Path(caminho).resolve()), n_linhas)
             caminho_rel = _salvar_relatorio_hr(conteudo)
             imprimir_log(f"Relatório gerado em: {caminho_rel}\n")
             imprimir_log(f"Total de inconsistências: {len(inconsistencias)}\n")
         except Exception as e:
-            imprimir_log(f"\n[ERRO] {str(e)}\n")
+            imprimir_log(f"\n[ERRO] {_mensagem_erro(e)}\n")
         finally:
             _habilitar_botoes()
 

@@ -14,6 +14,12 @@ import unicodedata
 import openpyxl
 import pandas as pd
 
+from app.errors import PlanilhaInvalidaError
+
+_COL_DATA_HR    = 0
+_COL_RE_HR      = 1
+_COL_HR_TRAB_HR = 19
+
 
 def carregar_dados_treinamento(caminho_treinamentos: str, caminho_classificacao: str):
     """Lê treinamentos realizados + base de classificação."""
@@ -185,6 +191,55 @@ def carregar_dados_atestado(caminho: str) -> list:
                 os.remove(caminho_convertido)
             except Exception:
                 pass
+
+
+def carregar_medicao_hr(caminho: str) -> tuple[list[dict], int]:
+    """Lê a sheet 'Frequencia' da Medição e extrai (matricula, data, hr_trabalhadas).
+
+    Retorna (registros, n_linhas_dados). `n_linhas_dados` conta linhas não vazias,
+    independentemente de `hr_trabalhadas` ser None.
+    """
+    if not os.path.exists(caminho):
+        raise FileNotFoundError(f"Arquivo não encontrado: {caminho}")
+
+    wb = openpyxl.load_workbook(caminho, read_only=True, data_only=True)
+    try:
+        if 'Frequencia' in wb.sheetnames:
+            ws = wb['Frequencia']
+        elif 'Frequência' in wb.sheetnames:
+            ws = wb['Frequência']
+        else:
+            raise PlanilhaInvalidaError(
+                "Planilha de Medição não contém a aba 'Frequencia'."
+            )
+
+        registros: list[dict] = []
+        n = 0
+        first = True
+        for row in ws.iter_rows(values_only=True):
+            if first:
+                first = False
+                continue
+            if row is None or all(c is None for c in row):
+                continue
+            n += 1
+            mat_val = row[_COL_RE_HR]      if len(row) > _COL_RE_HR      else None
+            dat_val = row[_COL_DATA_HR]    if len(row) > _COL_DATA_HR    else None
+            hr_val  = row[_COL_HR_TRAB_HR] if len(row) > _COL_HR_TRAB_HR else None
+            matricula = str(mat_val).strip() if mat_val is not None else ''
+            if hasattr(dat_val, 'strftime'):
+                data_str = dat_val.strftime('%d/%m/%Y')
+            else:
+                data_str = str(dat_val).strip() if dat_val is not None else ''
+            hr_trab = float(hr_val) if hr_val is not None else None
+            registros.append({
+                'matricula': matricula,
+                'data': data_str,
+                'hr_trabalhadas': hr_trab,
+            })
+    finally:
+        wb.close()
+    return registros, n
 
 
 def _converter_xls_para_xlsx(caminho_xls: str) -> str:
