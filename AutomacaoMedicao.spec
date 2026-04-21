@@ -24,10 +24,10 @@ else:
 
 a = Analysis(
     ['ui\\gui.py'],
-    pathex=[],
+    pathex=['.'],
     binaries=[],
     datas=_datas,
-    hiddenimports=[],
+    hiddenimports=['app', 'app.cli', 'app.cli.validar_hr'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
