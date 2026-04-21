@@ -13,6 +13,9 @@ dist/
 # Runtime data — entire directory excluded, no exceptions
 data/
 
+# assets/ — bundled source-of-truth (distribuicao xlsx). Versionado.
+# Nada a ignorar aqui por padrão.
+
 # Claude Code local settings
 .claude/settings.local.json
 

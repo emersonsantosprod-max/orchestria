@@ -5,7 +5,7 @@ paths.py — resolução determinística de caminhos em dev e em builds PyInstal
                           raiz do projeto em dev). Nunca depende de CWD.
 - `bundled_distribuicao_xlsx()` → xlsx read-only empacotado via PyInstaller
                                   `datas=`; em dev resolve para
-                                  `data/entrada/distribuicao_contratual_normalizada.xlsx`.
+                                  `assets/distribuicao_contratual_normalizada.xlsx`.
 """
 
 from __future__ import annotations
@@ -37,5 +37,5 @@ def db_path() -> Path:
 
 def bundled_distribuicao_xlsx() -> Path:
     if getattr(sys, 'frozen', False):
-        return _bundle_root() / 'data' / 'entrada' / 'distribuicao_contratual_normalizada.xlsx'
-    return _project_root() / 'data' / 'entrada' / 'distribuicao_contratual_normalizada.xlsx'
+        return _bundle_root() / 'assets' / 'distribuicao_contratual_normalizada.xlsx'
+    return _project_root() / 'assets' / 'distribuicao_contratual_normalizada.xlsx'

@@ -18,5 +18,5 @@ app/cli/validar_dist.py → registra BD/Medição no SQLite e gera relatório de
 app/cli/validar_hr.py → lê medicao_base.xlsx, chama validar_horas, grava relatório em data/saida/.
 app/cli/validar_consist.py → compara planilha original × processada (auditor autônomo).
 ui/gui.py → desktop GUI (tkinter); PyInstaller `AutomacaoMedicao.spec`. Executa bootstrap antes de chamar `pipeline.processar()`.
-data/entrada/distribuicao_contratual_normalizada.xlsx → empacotada no bundle (PyInstaller `datas=`); source do bootstrap inicial.
+assets/distribuicao_contratual_normalizada.xlsx → source-of-truth versionado (repo privado); empacotada no bundle via PyInstaller `datas=`; source do bootstrap inicial do SQLite.
 data/automacao.db → SQLite gravável em `<exe_dir>/data/` (frozen) ou raiz do projeto (dev); resolvido via `app.paths.db_path()`.

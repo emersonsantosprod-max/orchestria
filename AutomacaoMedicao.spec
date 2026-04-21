@@ -1,15 +1,33 @@
 # -*- mode: python ; coding: utf-8 -*-
-from PyInstaller.utils.hooks import collect_data_files
+"""PyInstaller spec — AutomacaoMedicao.
+
+Bundled asset:
+  - `assets/distribuicao_contratual_normalizada.xlsx` é source-of-truth
+    versionado (repo privado) e empacotado via PyInstaller `datas=`.
+  - Se ausente no build, o bundle é gerado sem ele e
+    `db.popular_bd_se_vazio()` detecta a ausência em runtime — o fluxo
+    de validação solicita o arquivo ao usuário via GUI/CLI.
+"""
+
+import os
+
+_DIST_XLSX = 'assets/distribuicao_contratual_normalizada.xlsx'
+_datas = []
+if os.path.exists(_DIST_XLSX):
+    _datas.append((_DIST_XLSX, 'assets'))
+else:
+    print(
+        f"[spec] AVISO: '{_DIST_XLSX}' ausente — build prosseguirá sem "
+        "o xlsx de bootstrap. Distribuição contratual deverá ser "
+        "registrada em runtime."
+    )
 
 a = Analysis(
-    ['ui/gui.py'],
-    pathex=['.'],
+    ['ui\\gui.py'],
+    pathex=[],
     binaries=[],
-    datas=[
-        ('data/entrada/distribuicao_contratual_normalizada.xlsx', 'data/entrada'),
-        *collect_data_files('customtkinter'),
-    ],
-    hiddenimports=['openpyxl', 'et_xmlfile', 'tkinter', 'customtkinter'],
+    datas=_datas,
+    hiddenimports=[],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
