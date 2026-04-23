@@ -1,6 +1,6 @@
 PYTHON ?= python
 
-.PHONY: install test lint dev
+.PHONY: install test lint dev build-win
 
 install:
 	$(PYTHON) -m pip install -e .[dev]
@@ -13,3 +13,6 @@ lint:
 
 dev:
 	$(PYTHON) -m app.main
+
+build-win:
+	venv_win\Scripts\pyinstaller.exe --clean --noconfirm AutomacaoMedicao.spec
