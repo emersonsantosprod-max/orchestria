@@ -14,11 +14,8 @@ def _col_map_minimo():
     }
 
 
-# ---------------------------------------------------------------------------
-# REGRESSÃO: férias SEMPRE sobrescreve observação
-# Caso real: VALDIVANDO FELIPE DE ALMEIDA — observação prévia
+# REGRESSÃO: caso real VALDIVANDO FELIPE DE ALMEIDA — observação prévia
 # "COB. FÉRIAS DE MARCELO SILVA" devia ser limpa ao aplicar FERIAS_DIRETO.
-# ---------------------------------------------------------------------------
 
 def test_regressao_ferias_direto_com_observacao():
     """FERIAS_DIRETO produz observacao com período e sobrescrever_obs=True."""
@@ -65,10 +62,6 @@ def test_regressao_writer_emite_patch_com_observacao():
     assert patches[(2282, col_sit_1)] == 'FÉRIAS'
 
 
-# ---------------------------------------------------------------------------
-# Classificação por linha (FERIAS, FERIAS_SD)
-# ---------------------------------------------------------------------------
-
 def test_ferias_sd_emite_observacao_com_sufixo():
     dados = [{
         'linha': 6, 'chapa': '1.000111',
@@ -110,10 +103,6 @@ def test_ferias_normal_emite_observacao_sem_sufixo():
     assert atus[0].sobrescrever_obs is True
 
 
-# ---------------------------------------------------------------------------
-# Rateio: mesma (matrícula, data) → múltiplas rows da medição atualizadas
-# ---------------------------------------------------------------------------
-
 def test_rateio_uma_data_multiplas_linhas_atualizadas():
     """Mesmo (mat, data) com 3 rows na medição → 3 atualizações idênticas."""
     dados = [{
@@ -138,10 +127,6 @@ def test_rateio_uma_data_multiplas_linhas_atualizadas():
     assert all(a.sobrescrever_obs is True for a in atus)
 
 
-# ---------------------------------------------------------------------------
-# Observação reflete o período ORIGINAL (pré-clipping ao mês)
-# ---------------------------------------------------------------------------
-
 def test_observacao_usa_periodo_original_nao_clipped():
     dados = [{
         'linha': 6, 'chapa': '1.000111',
@@ -165,10 +150,8 @@ def test_observacao_usa_periodo_original_nao_clipped():
     assert all(a.observacao == '28/03 a 02/04 - FÉRIAS' for a in atus)
 
 
-# ---------------------------------------------------------------------------
-# Cenário misto: treinamento + férias na mesma célula → férias vence
-# (writer.aplicar_updates aplica férias DEPOIS, sobrescrevendo a observação)
-# ---------------------------------------------------------------------------
+# Ordenação invariante (CLAUDE.md): writer.aplicar_updates aplica férias
+# DEPOIS de treinamento, sobrescrevendo a observação na mesma célula.
 
 def test_ferias_sobrescreve_observacao_de_treinamento_na_mesma_celula():
     col_map = _col_map_minimo()

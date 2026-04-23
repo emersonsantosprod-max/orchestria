@@ -7,9 +7,6 @@ import pytest
 from app import excel as writer
 from app import ferias
 
-# ---------------------------------------------------------------------------
-# Normalização de matrícula (helper compartilhado writer/ferias)
-# ---------------------------------------------------------------------------
 
 @pytest.mark.parametrize("entrada,esperado", [
     ("00012345", "12345"),
@@ -21,10 +18,6 @@ from app import ferias
 def test_normalizar_matricula(entrada, esperado):
     assert writer._normalizar_matricula(entrada) == esperado
 
-
-# ---------------------------------------------------------------------------
-# parse_periodo
-# ---------------------------------------------------------------------------
 
 def test_parse_periodo_valido():
     ini, fim = ferias.parse_periodo("24/11/2026 a 23/12/2026")
@@ -53,10 +46,6 @@ def test_parse_periodo_invertido():
     with pytest.raises(ValueError):
         ferias.parse_periodo("23/12/2026 a 24/11/2026")
 
-
-# ---------------------------------------------------------------------------
-# selecionar_ferias
-# ---------------------------------------------------------------------------
 
 def test_selecionar_ferias_prefere_primeira():
     sel = ferias.selecionar_ferias(
@@ -88,10 +77,6 @@ def test_selecionar_ferias_nenhuma(p1, s1, p2, s2):
     assert ferias.selecionar_ferias(p1, s1, p2, s2) is None
 
 
-# ---------------------------------------------------------------------------
-# formatar_observacao
-# ---------------------------------------------------------------------------
-
 def test_formatar_observacao_sem_sufixo():
     ini, fim = date(2026, 4, 5), date(2026, 4, 25)
     assert ferias.formatar_observacao(ini, fim, com_sufixo=False) == "05/04 a 25/04 - FÉRIAS"
@@ -101,10 +86,6 @@ def test_formatar_observacao_com_sufixo():
     ini, fim = date(2026, 4, 5), date(2026, 4, 25)
     assert ferias.formatar_observacao(ini, fim, com_sufixo=True) == "05/04 a 25/04 - FÉRIAS (NÃO DESCONTA)"
 
-
-# ---------------------------------------------------------------------------
-# _classificar (pura)
-# ---------------------------------------------------------------------------
 
 @pytest.mark.parametrize("md", ['ADICIONAL', 'PACOTE', 'CUSTO MANSERV'])
 def test_classificar_md_cobranca_direto(md):

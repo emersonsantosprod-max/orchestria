@@ -18,9 +18,6 @@ from app.validar_distribuicao import (
     validar_aderencia_distribuicao,
 )
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
 
 def _make_bd_xlsx(rows: list[tuple]) -> str:
     """Create temp BD xlsx with header + rows: (funcao, md_cobranca, area, quantidade)."""
@@ -56,10 +53,6 @@ def _mem_conn():
     return conectar(':memory:')
 
 
-# ---------------------------------------------------------------------------
-# _normalizar_pct
-# ---------------------------------------------------------------------------
-
 def test_normalizar_pct_ja_normalizado():
     assert _normalizar_pct(1.0) == 1.0
     assert _normalizar_pct(0.45) == 0.45
@@ -82,10 +75,6 @@ def test_normalizar_pct_limite_exato():
     # 1.01 > 1.0 → divide
     assert _normalizar_pct(1.01) == pytest.approx(0.0101)
 
-
-# ---------------------------------------------------------------------------
-# DB round-trip — BD
-# ---------------------------------------------------------------------------
 
 def test_registrar_bd_round_trip():
     path = _make_bd_xlsx([
@@ -111,10 +100,6 @@ def test_registrar_bd_limpa_anterior():
     assert len(rows) == 1
     assert rows[0]['funcao'] == 'INSPETOR'
 
-
-# ---------------------------------------------------------------------------
-# DB round-trip — Medição
-# ---------------------------------------------------------------------------
 
 def test_registrar_medicao_round_trip():
     path = _make_medicao_xlsx([
@@ -157,10 +142,6 @@ def test_registrar_medicao_sem_aviso_escala_uniforme():
     avisos = registrar_medicao(path, conn)
     assert not any('AVISO_ESCALA_INDEFINIDA' in av for av in avisos)
 
-
-# ---------------------------------------------------------------------------
-# validar() — casos principais
-# ---------------------------------------------------------------------------
 
 def _bd(rows):
     return [{'funcao': f, 'md_cobranca': m, 'area': a, 'quantidade': q}

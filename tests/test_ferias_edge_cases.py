@@ -14,10 +14,6 @@ def _col_map_minimo():
     }
 
 
-# ---------------------------------------------------------------------------
-# Interseção Parcial: período atravessa mês (março → abril)
-# ---------------------------------------------------------------------------
-
 def test_intersecao_parcial_mes_anterior():
     """Período 28/03–02/04: apenas dias de abril são processados."""
     dados = [{
@@ -50,10 +46,6 @@ def test_intersecao_parcial_mes_anterior():
     assert all(a.situacao == 'FÉRIAS' for a in atus)
 
 
-# ---------------------------------------------------------------------------
-# Período completamente fora do mês → skip silencioso
-# ---------------------------------------------------------------------------
-
 def test_periodo_fora_do_mes_skip_silencioso():
     """Período 01/05–03/05 não intersecta abril → sem atualizações, sem erro."""
     dados = [{
@@ -70,10 +62,6 @@ def test_periodo_fora_do_mes_skip_silencioso():
     assert incs == []
 
 
-# ---------------------------------------------------------------------------
-# Férias sem aprovação
-# ---------------------------------------------------------------------------
-
 def test_ferias_sem_aprovacao():
     """Nenhuma 1° nem 2° aprovada → skip silenciosamente (nenhuma inconsistência)."""
     dados = [{
@@ -87,10 +75,6 @@ def test_ferias_sem_aprovacao():
     assert atus == []
     assert incs == []
 
-
-# ---------------------------------------------------------------------------
-# Período inválido
-# ---------------------------------------------------------------------------
 
 @pytest.mark.parametrize("periodo", [
     "01/04/2026",           # falta ' a dd/mm/yyyy'
@@ -112,10 +96,6 @@ def test_periodo_invalido(periodo):
     assert incs[0].erro == 'período inválido'
 
 
-# ---------------------------------------------------------------------------
-# Matrícula não encontrada na medição
-# ---------------------------------------------------------------------------
-
 def test_matricula_nao_encontrada_uma_vez():
     """Uma matrícula ausente → exatamente 1 erro (não por dia)."""
     dados = [{
@@ -130,10 +110,6 @@ def test_matricula_nao_encontrada_uma_vez():
     assert len(incs) == 1
     assert incs[0].erro == 'matrícula não encontrada'
 
-
-# ---------------------------------------------------------------------------
-# Deduplicação: SgFunção ausente para múltiplos dias
-# ---------------------------------------------------------------------------
 
 def test_sg_dedup_por_matricula():
     """SgFunção missing em 5 dias: apenas 1 inconsistência por (mat, sg)."""
@@ -159,10 +135,6 @@ def test_sg_dedup_por_matricula():
     assert incs[0].erro == 'sg função não classificada'
 
 
-# ---------------------------------------------------------------------------
-# Pre-flight: colunas obrigatórias ausentes
-# ---------------------------------------------------------------------------
-
 @pytest.mark.parametrize("col_ausente", ['situacao', 'md_cobranca', 'sg_funcao'])
 def test_pre_flight_colunas_obrigatorias(col_ausente):
     """Coluna obrigatória ausente → RuntimeError."""
@@ -172,10 +144,6 @@ def test_pre_flight_colunas_obrigatorias(col_ausente):
     with pytest.raises(RuntimeError, match='colunas obrigatórias'):
         ferias.gerar_updates_ferias([], {}, {}, {}, {}, date(2026, 4, 1), col_map)
 
-
-# ---------------------------------------------------------------------------
-# MD Cobrança especial sem observação obrigatória
-# ---------------------------------------------------------------------------
 
 def test_md_cobranca_direto_com_observacao():
     """ADICIONAL/PACOTE/CUSTO MANSERV → Situação FÉRIAS, observação 'DD/MM A DD/MM - FÉRIAS'."""

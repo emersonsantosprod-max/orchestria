@@ -15,9 +15,6 @@ from app.distribuicao_contratual import (
     validar_distribuicao_cobranca,
 )
 
-# ---------------------------------------------------------------------------
-# normalize_area
-# ---------------------------------------------------------------------------
 
 def test_normalize_area():
     assert normalize_area('PE1') == 'PE-1'
@@ -30,10 +27,6 @@ def test_normalize_area():
     assert normalize_area('TEGAL') == 'TEGAL'
     assert normalize_area('ANALITICA') == 'ANALITICA'
 
-
-# ---------------------------------------------------------------------------
-# parse_distribuicao_cols
-# ---------------------------------------------------------------------------
 
 _FULL_HEADERS = (
     'TP MO', 'ÁREA', 'FUNÇÃO', 'SIGLA',
@@ -78,10 +71,6 @@ def test_parse_distribuicao_cols_unknown_header():
     assert any(w['tipo'] == AVISO_COLUNA_DESCONHECIDA for w in warnings)
 
 
-# ---------------------------------------------------------------------------
-# Helpers for mock workbook tests
-# ---------------------------------------------------------------------------
-
 def _make_workbook(rows: list) -> str:
     fd, path = tempfile.mkstemp(suffix='.xlsx')
     os.close(fd)
@@ -93,10 +82,6 @@ def _make_workbook(rows: list) -> str:
     wb.close()
     return path
 
-
-# ---------------------------------------------------------------------------
-# carregar_e_normalizar
-# ---------------------------------------------------------------------------
 
 def test_normalizar_amostra():
     path = _make_workbook([
@@ -179,10 +164,6 @@ def test_normalizar_two_functions():
     assert raw_sums['ELET-II'] == 5
     assert not any(w['tipo'] in (ERRO_SIGLA, ERRO_TOTAL) for w in warnings)
 
-
-# ---------------------------------------------------------------------------
-# validar
-# ---------------------------------------------------------------------------
 
 def test_validar_total_match():
     normalized = [{'funcao': 'ELET-I', 'md_cobranca': 'CENTRAL', 'area': None, 'quantidade': 5}]

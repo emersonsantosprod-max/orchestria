@@ -16,10 +16,6 @@ def _reg(matricula='123', data='01/04/2026', hr=8.0):
     return {'matricula': matricula, 'data': data, 'hr_trabalhadas': hr}
 
 
-# ---------------------------------------------------------------------------
-# validar_horas_trabalhadas()
-# ---------------------------------------------------------------------------
-
 def test_validar_sem_inconsistencias():
     regs = [_reg(hr=0.0), _reg(hr=4.5), _reg(hr=LIMITE_HH)]
     assert validar_horas_trabalhadas(regs) == []
@@ -79,10 +75,6 @@ def test_validar_ordenacao():
         ('03/04/2026', '999'),
     ]
 
-
-# ---------------------------------------------------------------------------
-# gerar_relatorio()
-# ---------------------------------------------------------------------------
 
 def test_relatorio_aprovada():
     conteudo = gerar_relatorio([], caminho_medicao='/path/to/file.xlsx', n_linhas=10)
