@@ -51,6 +51,10 @@ CREATE TABLE IF NOT EXISTS medicao_frequencia (
     md_cobranca  TEXT NOT NULL,
     pct_cobranca REAL NOT NULL
 );
+CREATE TABLE IF NOT EXISTS bd_treinamentos (
+    nome TEXT NOT NULL,
+    tipo TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS registro_arquivos (
     tipo         TEXT PRIMARY KEY,
     caminho      TEXT NOT NULL,
@@ -246,3 +250,34 @@ def obter_registro_arquivos(conn: sqlite3.Connection) -> dict[str, dict]:
         'SELECT tipo, caminho, importado_em FROM registro_arquivos'
     ).fetchall()
     return {r['tipo']: {'caminho': r['caminho'], 'importado_em': r['importado_em']} for r in rows}
+
+
+def registrar_base_treinamentos(path: str | Path, conn: sqlite3.Connection) -> None:
+    """Import Base de Treinamentos.xlsx into SQLite bd_treinamentos table."""
+    wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
+    records = []
+    for row in wb.active.iter_rows(min_row=2, values_only=True):
+        if not row[0]:
+            continue
+        nome = str(row[0]).strip().upper()
+        tipo_raw = str(row[1]).strip().lower() if row[1] else ''
+        tipo = 'nao_remunerado' if ('não' in tipo_raw or 'nao' in tipo_raw) else 'remunerado'
+        records.append((nome, tipo))
+    wb.close()
+
+    conn.execute('DELETE FROM bd_treinamentos')
+    conn.executemany(
+        'INSERT INTO bd_treinamentos (nome, tipo) VALUES (?,?)',
+        records,
+    )
+    conn.execute(
+        'INSERT OR REPLACE INTO registro_arquivos (tipo, caminho, importado_em) VALUES (?,?,?)',
+        ('treinamentos', str(path), datetime.now().isoformat()),
+    )
+    conn.commit()
+
+
+def obter_tabela_treinamento(conn: sqlite3.Connection) -> dict[str, str]:
+    """Return {nome_upper: tipo} from bd_treinamentos."""
+    rows = conn.execute('SELECT nome, tipo FROM bd_treinamentos').fetchall()
+    return {r['nome']: r['tipo'] for r in rows}

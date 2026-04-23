@@ -25,6 +25,7 @@ from ui.gui_handlers import (
     GuiContext,
     iniciar_atestado,
     iniciar_ferias,
+    iniciar_importar_base_treinamentos,
     iniciar_lancamento,
     iniciar_validacao,
     iniciar_validar_hr,
@@ -41,7 +42,7 @@ _TXT_NAV     = "#e5e5e5"
 
 
 def _todos_botoes():
-    return [botao_lancar, botao_ferias, botao_atestado, botao_validar, botao_validar_hr]
+    return [botao_lancar, botao_ferias, botao_atestado, botao_importar_base, botao_validar, botao_validar_hr]
 
 
 def _desabilitar_botoes():
@@ -225,7 +226,20 @@ botao_atestado = ctk.CTkButton(
     height=36,
     command=lambda: iniciar_atestado(_ctx),
 )
-botao_atestado.pack(side="left")
+botao_atestado.pack(side="left", padx=(0, 8))
+
+botao_importar_base = ctk.CTkButton(
+    frame_lancar,
+    text="Importar Base de Treinamentos",
+    font=_fonte_botao,
+    fg_color=_CHUMBO,
+    hover_color=_CHUMBO_2,
+    text_color=_TXT_INV,
+    corner_radius=4,
+    height=36,
+    command=lambda: iniciar_importar_base_treinamentos(_ctx),
+)
+botao_importar_base.pack(side="left")
 
 frame_validacao = ctk.CTkFrame(painel_botoes, fg_color=_PAINEL, corner_radius=0)
 

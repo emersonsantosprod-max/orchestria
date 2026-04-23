@@ -105,14 +105,41 @@ def iniciar_lancamento(ctx: GuiContext):
         prompts=[
             ("1. Selecione a planilha de Medição Destino", 'medicao'),
             ("2. Selecione a planilha de Treinamentos Realizados", 'treinamentos'),
-            ("3. Selecione a Base de Treinamentos (Classificação)", 'classificacao'),
         ],
         montar_kwargs=lambda c: dict(
             caminho_medicao=c['medicao'],
             caminho_treinamentos=c['treinamentos'],
-            caminho_classificacao=c['classificacao'],
         ),
     )
+
+
+def iniciar_importar_base_treinamentos(ctx: GuiContext):
+    ctx.desabilitar_botoes()
+    ctx.limpar_log()
+
+    caminho = selecionar_arquivo("Selecione a Base de Treinamentos (xlsx)")
+    if not caminho:
+        ctx.imprimir_log("Operação cancelada: arquivo não foi selecionado.\n")
+        ctx.habilitar_botoes()
+        return
+
+    ctx.imprimir_log("Importando Base de Treinamentos...\n")
+
+    def tarefa():
+        try:
+            conn = db.conectar()
+            try:
+                db.registrar_base_treinamentos(caminho, conn)
+                tabela = db.obter_tabela_treinamento(conn)
+            finally:
+                conn.close()
+            ctx.imprimir_log(f"Base importada: {len(tabela)} treinamentos registrados.\n")
+        except Exception as e:
+            ctx.imprimir_log(f"\n[ERRO] {mensagem_erro(e)}\n")
+        finally:
+            ctx.habilitar_botoes()
+
+    threading.Thread(target=tarefa, daemon=True).start()
 
 
 def iniciar_ferias(ctx: GuiContext):

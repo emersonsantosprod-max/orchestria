@@ -59,7 +59,6 @@ def _mes_referencia(medicao_por_matricula: dict):
 def executar_pipeline(
     caminho_medicao: str,
     caminho_treinamentos: str = '',
-    caminho_classificacao: str = '',
     caminho_ferias: str = '',
     caminho_base_cobranca: str = '',
     caminho_atestado: str = '',
@@ -71,7 +70,7 @@ def executar_pipeline(
     Executa o pipeline completo.
 
     Flags opt-in:
-      - treinamento ativo: ambos caminho_treinamentos e caminho_classificacao
+      - treinamento ativo: caminho_treinamentos fornecido E conn não é None
       - férias ativo:      ambos caminho_ferias e caminho_base_cobranca
 
     Se caminho_saida vazio, usa o diretório da medição.
@@ -79,7 +78,7 @@ def executar_pipeline(
     if validar_distribuicao and conn is None:
         raise ValueError("validar_distribuicao=True requires conn")
 
-    treinamento_ativo = bool(caminho_treinamentos and caminho_classificacao)
+    treinamento_ativo = bool(caminho_treinamentos and conn is not None)
     ferias_ativo      = bool(caminho_ferias and caminho_base_cobranca)
     atestado_ativo    = bool(caminho_atestado)
 
@@ -93,9 +92,17 @@ def executar_pipeline(
     base_cobranca = {}
     dados_atestado = []
 
+    if treinamento_ativo:
+        tabela = db.obter_tabela_treinamento(conn)
+        if not tabela:
+            raise ValueError(
+                "bd_treinamentos está vazio. Execute 'importar-base-treinamentos' "
+                "antes de processar treinamentos."
+            )
+
     try:
         if treinamento_ativo:
-            dados, tabela = loaders.carregar_dados_treinamento(caminho_treinamentos, caminho_classificacao)
+            dados = loaders.carregar_dados_treinamento(caminho_treinamentos)
         if ferias_ativo:
             dados_ferias, base_cobranca = loaders.carregar_dados_ferias(caminho_ferias, caminho_base_cobranca)
         if atestado_ativo:

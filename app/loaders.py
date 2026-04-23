@@ -22,23 +22,10 @@ _COL_RE_HR      = 1
 _COL_HR_TRAB_HR = 19
 
 
-def carregar_dados_treinamento(caminho_treinamentos: str, caminho_classificacao: str):
-    """Lê treinamentos realizados + base de classificação."""
-    for c in (caminho_treinamentos, caminho_classificacao):
-        if not os.path.exists(c):
-            raise FileNotFoundError(f"Arquivo não encontrado: {c}")
-
-    tabela = {}
-    wb = openpyxl.load_workbook(caminho_classificacao, read_only=True, data_only=True)
-    for row in wb.active.iter_rows(min_row=2, values_only=True):
-        if row[0]:
-            nome = str(row[0]).strip().upper()
-            tipo_raw = str(row[1]).strip().lower() if row[1] else ''
-            tabela[nome] = (
-                'nao_remunerado' if ('não' in tipo_raw or 'nao' in tipo_raw)
-                else 'remunerado'
-            )
-    wb.close()
+def carregar_dados_treinamento(caminho_treinamentos: str) -> list[dict]:
+    """Lê treinamentos realizados do xlsx mensal."""
+    if not os.path.exists(caminho_treinamentos):
+        raise FileNotFoundError(f"Arquivo não encontrado: {caminho_treinamentos}")
 
     dados = []
     wb = openpyxl.load_workbook(caminho_treinamentos, read_only=True, data_only=True)
@@ -58,7 +45,7 @@ def carregar_dados_treinamento(caminho_treinamentos: str, caminho_classificacao:
         })
     wb.close()
 
-    return dados, tabela
+    return dados
 
 
 def carregar_dados_ferias(caminho_ferias: str, caminho_base_cobranca: str):
