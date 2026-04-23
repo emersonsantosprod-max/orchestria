@@ -9,9 +9,6 @@ from pathlib import Path
 
 import customtkinter as ctk
 
-# ---------------------------------------------------------------------------
-# Path setup
-# ---------------------------------------------------------------------------
 
 def get_base_path():
     if getattr(sys, 'frozen', False):
@@ -33,10 +30,6 @@ from ui.gui_handlers import (
     iniciar_validar_hr,
 )
 
-# ---------------------------------------------------------------------------
-# Design tokens (Manserv brand)
-# ---------------------------------------------------------------------------
-
 _CHUMBO      = "#232323"
 _CHUMBO_2    = "#111111"
 _LARANJA     = "#ff460a"
@@ -46,10 +39,6 @@ _PAINEL      = "#ffffff"
 _TXT_INV     = "#ffffff"
 _TXT_NAV     = "#e5e5e5"
 
-
-# ---------------------------------------------------------------------------
-# Button state helpers
-# ---------------------------------------------------------------------------
 
 def _todos_botoes():
     return [botao_lancar, botao_ferias, botao_atestado, botao_validar, botao_validar_hr]
@@ -75,10 +64,6 @@ def _limpar_log():
     area_saida.delete("1.0", "end")
 
 
-# ---------------------------------------------------------------------------
-# Sidebar navigation
-# ---------------------------------------------------------------------------
-
 def _ativar_aba(tab_id):
     if tab_id == 'lancar':
         nav_lancar.configure(fg_color=_LARANJA, text_color=_TXT_INV, font=_fonte_nav_ativo)
@@ -91,10 +76,6 @@ def _ativar_aba(tab_id):
         frame_lancar.pack_forget()
         frame_validacao.pack(padx=16, pady=12, fill="x")
 
-
-# ---------------------------------------------------------------------------
-# Window
-# ---------------------------------------------------------------------------
 
 ctk.set_appearance_mode("light")
 ctk.set_default_color_theme("blue")
@@ -128,10 +109,6 @@ _fonte_log      = ctk.CTkFont(family="Courier New", size=10)
 
 janela.grid_columnconfigure(1, weight=1)
 janela.grid_rowconfigure(0, weight=1)
-
-# ---------------------------------------------------------------------------
-# Sidebar
-# ---------------------------------------------------------------------------
 
 sidebar = ctk.CTkFrame(janela, width=200, corner_radius=0, fg_color=_CHUMBO)
 sidebar.grid(row=0, column=0, sticky="nsew")
@@ -195,10 +172,6 @@ ctk.CTkLabel(
     text_color="#555555",
     anchor="w",
 ).grid(row=6, column=0, padx=18, pady=(0, 12), sticky="sw")
-
-# ---------------------------------------------------------------------------
-# Content area
-# ---------------------------------------------------------------------------
 
 content = ctk.CTkFrame(janela, corner_radius=0, fg_color=_CONTEUDO)
 content.grid(row=0, column=1, sticky="nsew")

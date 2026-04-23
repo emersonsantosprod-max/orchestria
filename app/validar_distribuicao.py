@@ -38,33 +38,29 @@ def validar_aderencia_distribuicao(
     bd_records: list[dict],
     medicao_records: list[dict],
 ) -> list[InconsistenciaDistribuicao]:
-    # Step 1 — Agregar BD por (funcao, md_cobranca), ignorando area
     bd_expected: dict[tuple[str, str], float] = defaultdict(float)
     for r in bd_records:
         bd_expected[(r['funcao'], r['md_cobranca'])] += r['quantidade']
 
-    # Índice BD: funcao → conjunto de md_cobranças esperadas
     bd_md_por_funcao: dict[str, set[str]] = defaultdict(set)
     for funcao, md_cobranca in bd_expected:
         bd_md_por_funcao[funcao].add(md_cobranca)
 
-    # Step 2 — Agregar Medição por (data, sg_funcao, md_cobranca)
     medicao_grouped: dict[tuple[str, str, str], float] = defaultdict(float)
     for r in medicao_records:
         medicao_grouped[(r['data'], r['sg_funcao'], r['md_cobranca'])] += r['pct_cobranca']
 
-    # Step 3 — Funcoes presentes por data (universo temporal vem da Medição)
     funcoes_por_data: dict[str, set[str]] = defaultdict(set)
     for data, sg_funcao, _ in medicao_grouped:
         funcoes_por_data[data].add(sg_funcao)
 
-    # Step 4 — Validação em dois níveis
+    # Universo temporal: datas vêm da Medição; BD não gera datas (invariante).
     result: list[InconsistenciaDistribuicao] = []
     for data in sorted(funcoes_por_data):
-        for funcao in funcoes_por_data[data]:                    # Nível 1: funcao presente na Medição
+        for funcao in funcoes_por_data[data]:
             if funcao not in bd_md_por_funcao:
-                continue                                          # sem contrato BD para esta funcao
-            for md_cobranca in bd_md_por_funcao[funcao]:        # Nível 2: md_cobranças do BD
+                continue
+            for md_cobranca in bd_md_por_funcao[funcao]:
                 esperado  = bd_expected[(funcao, md_cobranca)]
                 realizado = medicao_grouped.get((data, funcao, md_cobranca), 0.0)
                 diff      = round(realizado - esperado, 10)
@@ -116,10 +112,6 @@ def validar_para_dominio(
         for inc in validar_aderencia_distribuicao(bd_records, medicao_snapshot)
     ]
 
-
-# ---------------------------------------------------------------------------
-# Relatório
-# ---------------------------------------------------------------------------
 
 from collections import Counter  # noqa: E402
 from datetime import datetime  # noqa: E402

@@ -32,10 +32,6 @@ from app.core import (
     parse_data_obj as _core_parse_data_obj,
 )
 
-# ---------------------------------------------------------------------------
-# Namespaces OOXML
-# ---------------------------------------------------------------------------
-
 _NS = 'http://schemas.openxmlformats.org/spreadsheetml/2006/main'
 _NS_R = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships'
 _NS_REL = 'http://schemas.openxmlformats.org/package/2006/relationships'
@@ -49,10 +45,6 @@ ET.register_namespace('xr2', 'http://schemas.microsoft.com/office/spreadsheetml/
 ET.register_namespace('xr3', 'http://schemas.microsoft.com/office/spreadsheetml/2016/revision3')
 
 
-# ---------------------------------------------------------------------------
-# Endereçamento de células
-# ---------------------------------------------------------------------------
-
 def _col_letter(n: int) -> str:
     s = ''
     while n:
@@ -64,10 +56,6 @@ def _col_letter(n: int) -> str:
 def _cell_addr(row: int, col: int) -> str:
     return f"{_col_letter(col)}{row}"
 
-
-# ---------------------------------------------------------------------------
-# Wrappers para utilitários do core (compat com consumidores existentes)
-# ---------------------------------------------------------------------------
 
 def _normalizar_matricula(valor) -> str:
     return _core_normalizar_matricula(valor)
@@ -89,10 +77,6 @@ def _converter_minutos_para_hhmmss(minutos: int) -> str:
     return _core_converter_minutos_para_hhmmss(minutos)
 
 
-# ---------------------------------------------------------------------------
-# Carregamento
-# ---------------------------------------------------------------------------
-
 def carregar_planilha(caminho: str, read_only: bool = False, data_only: bool = False):
     if not os.path.exists(caminho):
         raise FileNotFoundError(f"Arquivo não encontrado: {caminho}")
@@ -105,10 +89,6 @@ def carregar_planilha(caminho: str, read_only: bool = False, data_only: bool = F
 
     return wb, wb[nome_aba]
 
-
-# ---------------------------------------------------------------------------
-# Mapeamento de colunas
-# ---------------------------------------------------------------------------
 
 _PALAVRAS_PROIBIDAS_DESCONTO = {'total', 'apoio', 'dif', 'descanso'}
 
@@ -152,7 +132,6 @@ def mapear_colunas(sheet) -> dict:
         'matricula':   ['re', 'matricula'],
         'desconto':    ['descontos'],
         'observacao':  ['observacao', 'observacoes'],
-        # Opcionais — necessários para férias/atestado/validação.
         'situacao':     ['situacao'],
         'md_cobranca':  ['md cobranca'],
         'sg_funcao':    ['sg funcao'],
@@ -190,10 +169,6 @@ def mapear_colunas(sheet) -> dict:
         "sem ambiguidade nas primeiras 5 linhas da planilha."
     )
 
-
-# ---------------------------------------------------------------------------
-# Indexação e leitura (passada única em read_only)
-# ---------------------------------------------------------------------------
 
 def indexar_e_ler_dados(sheet, col_map: dict) -> tuple:
     """
@@ -288,10 +263,6 @@ def indexar_e_ler_dados(sheet, col_map: dict) -> tuple:
     )
 
 
-# ---------------------------------------------------------------------------
-# Aplicação de updates (contrato unificado)
-# ---------------------------------------------------------------------------
-
 def aplicar_updates(
     updates: list,
     col_map: dict,
@@ -338,7 +309,6 @@ def aplicar_updates(
         mat = upd.matricula
         data = upd.data
 
-        # Resolver linhas alvo
         if upd.row is not None:
             if not isinstance(upd.row, int) or upd.row < 1 or (max_row_known > 0 and upd.row > max_row_known):
                 inconsistencias.append(inconsistencia(
@@ -362,7 +332,6 @@ def aplicar_updates(
                 rows = [rows]
             target_rows = rows
 
-        # Observação
         obs_final = None
         if upd.observacao is not None:
             if upd.sobrescrever_obs:
@@ -379,7 +348,6 @@ def aplicar_updates(
             total_min = upd.desconto_min + existente_min
             desconto_str = _core_converter_minutos_para_hhmmss(total_min)
 
-        # Situação
         sit = upd.situacao
 
         for row_idx in target_rows:
@@ -395,10 +363,7 @@ def aplicar_updates(
     return patches, inconsistencias
 
 
-# ---------------------------------------------------------------------------
-# Escrita via ZIP patch (NÃO TOCAR — performance crítica)
-# ---------------------------------------------------------------------------
-
+# Escrita via ZIP patch — NÃO substituir por openpyxl write mode (CLAUDE.md CRITICAL: 4s → 42s).
 def _set_string_cell(c_el, value: str):
     for child in list(c_el):
         c_el.remove(child)
