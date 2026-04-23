@@ -32,9 +32,6 @@ from app.errors import (
     AutomacaoError,
 )
 
-# ---------------------------------------------------------------------------
-# Resultado
-# ---------------------------------------------------------------------------
 
 @dataclass
 class Resultado:
@@ -48,10 +45,6 @@ class Resultado:
     caminho_saida: str = ''
 
 
-# ---------------------------------------------------------------------------
-# Helpers internos
-# ---------------------------------------------------------------------------
-
 def _mes_referencia(medicao_por_matricula: dict):
     """Deriva mês alvo da menor data do índice da Medição."""
     todas = (
@@ -62,10 +55,6 @@ def _mes_referencia(medicao_por_matricula: dict):
         raise RuntimeError("Medição não contém datas válidas para inferir mês de referência.")
     return menor.replace(day=1)
 
-
-# ---------------------------------------------------------------------------
-# Entry point
-# ---------------------------------------------------------------------------
 
 def executar_pipeline(
     caminho_medicao: str,
@@ -98,9 +87,6 @@ def executar_pipeline(
         medicao_dir = os.path.dirname(caminho_medicao) or '.'
         caminho_saida = os.path.join(medicao_dir, 'medicao_processada.xlsx')
 
-    # ------------------------------------------------------------------
-    # Fase 1: Leitura
-    # ------------------------------------------------------------------
     dados = []
     tabela = {}
     dados_ferias = []
@@ -133,9 +119,6 @@ def executar_pipeline(
     except Exception as e:
         raise RuntimeError(f"Erro na fase de leitura: {e}") from e
 
-    # ------------------------------------------------------------------
-    # Fase 2: Processamento
-    # ------------------------------------------------------------------
     updates_treinamento = []
     inconst_trein = []
     if treinamento_ativo:
@@ -162,11 +145,8 @@ def executar_pipeline(
     if atestado_ativo:
         updates_atestado, inconst_atestado = atestado.processar_atestados(dados_atestado)
 
-    # ------------------------------------------------------------------
-    # Fase 3: Escrita
     # Ordem: treinamento + férias primeiro; atestado em chamada separada.
     # Patches são mesclados com atestado sobrescrevendo (prioridade absoluta).
-    # ------------------------------------------------------------------
     try:
         patches_base, inconst_escrita_base = writer.aplicar_updates(
             updates_treinamento + updates_ferias, col_map, index,
@@ -205,10 +185,6 @@ def executar_pipeline(
         caminho_saida=caminho_saida,
     )
 
-
-# ---------------------------------------------------------------------------
-# Relatório de inconsistências (.txt)
-# ---------------------------------------------------------------------------
 
 def salvar_relatorio_inconsistencias(caminho_dir: str, inconsistencias: list):
     """Gera 'relatorio_inconsistencias.txt' no diretório informado."""

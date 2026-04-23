@@ -43,10 +43,6 @@ SITUACAO_SEM_DESC = 'FÉRIAS S/ DESC'
 _OBRIGATORIAS_FERIAS = ('situacao', 'md_cobranca', 'sg_funcao')
 
 
-# ---------------------------------------------------------------------------
-# Parsing / seleção
-# ---------------------------------------------------------------------------
-
 def parse_periodo(s):
     """'dd/mm/yyyy a dd/mm/yyyy' → (date, date). Lança ValueError."""
     if s is None:
@@ -77,10 +73,6 @@ def formatar_observacao(ini, fim, com_sufixo):
     return base + " (NÃO DESCONTA)" if com_sufixo else base
 
 
-# ---------------------------------------------------------------------------
-# Classificação
-# ---------------------------------------------------------------------------
-
 def _classificar(md_cob, sg_fun, base_cobranca):
     """Pura. Retorna (tipo, com_sufixo, erro_or_None)."""
     if md_cob in MD_COBRANCA_FERIAS_DIRETO:
@@ -94,10 +86,6 @@ def _classificar(md_cob, sg_fun, base_cobranca):
         return ('FERIAS_SD', True, None)
     return ('FERIAS', False, None)
 
-
-# ---------------------------------------------------------------------------
-# Processamento principal
-# ---------------------------------------------------------------------------
 
 def gerar_updates_ferias(
     dados_ferias,
@@ -118,7 +106,6 @@ def gerar_updates_ferias(
 
       inconsistencias: list[Inconsistencia] (origem='ferias')
     """
-    # Pré-flight
     faltantes = [c for c in _OBRIGATORIAS_FERIAS if c not in col_map]
     if faltantes:
         raise RuntimeError(
@@ -126,7 +113,6 @@ def gerar_updates_ferias(
             + ", ".join(faltantes)
         )
 
-    # Janela do mês
     if mes_referencia.day != 1:
         mes_referencia = mes_referencia.replace(day=1)
     mes_ini = mes_referencia
@@ -207,7 +193,7 @@ def gerar_updates_ferias(
             elif tipo == 'FERIAS_SD':
                 situacao = SITUACAO_SEM_DESC
                 observacao = obs_com_sufixo
-            else:  # 'FERIAS'
+            else:
                 situacao = SITUACAO_PADRAO
                 observacao = obs_sem_sufixo
 

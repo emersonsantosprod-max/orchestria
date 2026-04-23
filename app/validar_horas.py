@@ -52,10 +52,6 @@ def validar_horas_trabalhadas(registros: list[dict]) -> list[InconsistenciaHr]:
     return sorted(result, key=lambda x: (x.data, x.matricula))
 
 
-# ---------------------------------------------------------------------------
-# Relatório
-# ---------------------------------------------------------------------------
-
 _DIR_SAIDA = Path('data/saida')
 
 SEP_SECAO = '═' * 80

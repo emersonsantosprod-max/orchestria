@@ -23,17 +23,9 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Literal
 
-# ---------------------------------------------------------------------------
-# Regexes compartilhadas
-# ---------------------------------------------------------------------------
-
 _RE_DDMMYYYY = re.compile(r'\d{2}/\d{2}/\d{4}$')
 _RE_HHMMSS   = re.compile(r'^(\d{1,2}):(\d{2})(?::(\d{2}))?$')
 
-
-# ---------------------------------------------------------------------------
-# Normalização
-# ---------------------------------------------------------------------------
 
 def normalizar_matricula(valor) -> str:
     """
@@ -101,19 +93,8 @@ def converter_minutos_para_hhmmss(minutos: int) -> str:
     return f"{hh:02d}:{mm:02d}"
 
 
-# ---------------------------------------------------------------------------
-# Deduplicação de observação
-#
-# Cópia bit-exata da antiga treinamento.montar_observacao:
-#   - split em ';' (sem espaço)
-#   - strip de cada parte; descarta vazias
-#   - set para lookup O(1); list preserva ordem de inserção
-#   - join com '; '
-#
-# Qualquer mudança de semântica aqui é regressão. test_integration.py:42 é o
-# guard canônico (compara bytes exatos da célula).
-# ---------------------------------------------------------------------------
-
+# Semântica bit-exata da antiga treinamento.montar_observacao — qualquer mudança
+# é regressão. Guard canônico: test_integration.py:42 compara bytes da célula.
 def deduplicar_observacao(observacao_existente, novas_entradas: list) -> str:
     obs = observacao_existente or ''
     partes = [p.strip() for p in obs.split(';') if p.strip()]
@@ -124,10 +105,6 @@ def deduplicar_observacao(observacao_existente, novas_entradas: list) -> str:
             vistos.add(texto)
     return '; '.join(partes)
 
-
-# ---------------------------------------------------------------------------
-# Dataclasses
-# ---------------------------------------------------------------------------
 
 Tipo = Literal['treinamento', 'ferias', 'atestado']
 Origem = Literal['treinamento', 'ferias', 'atestado', 'writer']

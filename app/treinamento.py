@@ -29,18 +29,10 @@ from app.core import (
     normalizar_matricula,
 )
 
-# ---------------------------------------------------------------------------
-# Regexes pré-compiladas
-# ---------------------------------------------------------------------------
-
 _RE_CARGA = re.compile(r'(\d+)H')
 _RE_INTERVALO = re.compile(r'(\d{1,2})\s+À\s+(\d{1,2})/(\d{2})/(\d{4})')
 _RE_DATA_SIMPLES = re.compile(r'\d{2}/\d{2}/\d{4}')
 
-
-# ---------------------------------------------------------------------------
-# Conversões
-# ---------------------------------------------------------------------------
 
 def converter_carga_para_horas(carga_str: str) -> int:
     match = _RE_CARGA.fullmatch(carga_str.strip())
@@ -79,20 +71,12 @@ def expandir_datas(data_val) -> list:
     raise ValueError(f"Formato de data inválido: '{s}'")
 
 
-# ---------------------------------------------------------------------------
-# Classificação
-# ---------------------------------------------------------------------------
-
 def classificar_treinamento(nome: str, tabela: dict) -> str:
     chave = nome.strip().upper()
     if chave not in tabela:
         raise KeyError(nome)
     return tabela[chave]
 
-
-# ---------------------------------------------------------------------------
-# Agrupamento
-# ---------------------------------------------------------------------------
 
 def agrupar_por_matricula_data(registros: list) -> dict:
     """
@@ -104,10 +88,6 @@ def agrupar_por_matricula_data(registros: list) -> dict:
         grupos[(r['matricula'], r['data'])].append(r)
     return dict(grupos)
 
-
-# ---------------------------------------------------------------------------
-# Cálculo de desconto
-# ---------------------------------------------------------------------------
 
 LIMITE_HH = 9 + 10/60   # 9h10 exatos (= 9.16666..., igual ao Excel)
 
@@ -121,10 +101,6 @@ def calcular_desconto(horas_nao_rem: int, horas_total: int) -> float:
     excesso = horas_total - LIMITE_HH
     return max(0, horas_nao_rem - excesso)
 
-
-# ---------------------------------------------------------------------------
-# Observação
-# ---------------------------------------------------------------------------
 
 def _texto_treinamento(nome: str, horas: int, remunerado: bool) -> str:
     sufixo = " (NÃO DESCONTA)" if remunerado else ""
@@ -142,10 +118,6 @@ def montar_observacao(lista_treinamentos: list, observacao_existente) -> str:
     ]
     return deduplicar_observacao(observacao_existente, novas_entradas)
 
-
-# ---------------------------------------------------------------------------
-# Processamento principal
-# ---------------------------------------------------------------------------
 
 def gerar_updates_treinamento(
     dados: list,
@@ -168,9 +140,6 @@ def gerar_updates_treinamento(
     inconsistencias = []
     registros_expandidos = []
 
-    # ------------------------------------------------------------------
-    # Fase 1: validar campos e expandir datas (obrigatório antes do agrupamento)
-    # ------------------------------------------------------------------
     for r in dados:
         matricula_norm = normalizar_matricula(r.get('matricula'))
 
@@ -215,14 +184,8 @@ def gerar_updates_treinamento(
                 'data':        data,
             })
 
-    # ------------------------------------------------------------------
-    # Fase 2: agrupar por (matrícula, data)
-    # ------------------------------------------------------------------
     grupos = agrupar_por_matricula_data(registros_expandidos)
 
-    # ------------------------------------------------------------------
-    # Fase 3: calcular desconto e montar observação por grupo
-    # ------------------------------------------------------------------
     atualizacoes = []
 
     for (matricula, data), grupo in grupos.items():

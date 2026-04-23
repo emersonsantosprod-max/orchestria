@@ -14,13 +14,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from app import db
 from app import pipeline as service
 
-# Re-exports mantidos para consumidores existentes (GUI, testes).
 salvar_relatorio_inconsistencias = service.salvar_relatorio_inconsistencias
 
-
-# ---------------------------------------------------------------------------
-# Caminhos default
-# ---------------------------------------------------------------------------
 
 def definir_caminhos():
     base_dir  = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -35,10 +30,6 @@ def definir_caminhos():
         os.path.join(entrada, 'base_cobranca.xlsx'),
     )
 
-
-# ---------------------------------------------------------------------------
-# Entry point (mantém assinatura legada para GUI + testes)
-# ---------------------------------------------------------------------------
 
 def executar_medicao(
     c_medicao_custom=None,
@@ -91,10 +82,6 @@ def executar_medicao(
         conn.close()
     return resultado
 
-
-# ---------------------------------------------------------------------------
-# CLI
-# ---------------------------------------------------------------------------
 
 def exibir_resumo(resultado):
     print('\nProcessamento concluído\n')

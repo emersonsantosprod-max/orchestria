@@ -10,9 +10,12 @@ Bundled asset:
 """
 
 import os
+from PyInstaller.utils.hooks import collect_all
+
+_ctk_datas, _ctk_binaries, _ctk_hiddenimports = collect_all('customtkinter')
 
 _DIST_XLSX = 'assets/distribuicao_contratual_normalizada.xlsx'
-_datas = []
+_datas = [*_ctk_datas]
 if os.path.exists(_DIST_XLSX):
     _datas.append((_DIST_XLSX, 'assets'))
 else:
@@ -23,11 +26,11 @@ else:
     )
 
 a = Analysis(
-    ['ui\\gui.py'],
+    ['ui/gui.py'],
     pathex=['.'],
-    binaries=[],
+    binaries=[*_ctk_binaries],
     datas=_datas,
-    hiddenimports=['app', 'app.cli', 'app.cli.validar_hr'],
+    hiddenimports=['app', 'app.cli', 'app.cli.validar_hr', 'darkdetect', *_ctk_hiddenimports],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

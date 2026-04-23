@@ -19,10 +19,6 @@ from collections import defaultdict
 
 import openpyxl
 
-# ---------------------------------------------------------------------------
-# Tipos de inconsistência
-# ---------------------------------------------------------------------------
-
 ERRO_SIGLA               = 'ERRO_SIGLA'
 ERRO_TOTAL               = 'ERRO_TOTAL'
 AVISO_DECIMAL            = 'AVISO_DECIMAL'
@@ -40,17 +36,9 @@ _SKIP_HEADERS = frozenset(
 _AREA_MAP = {'PE1': 'PE-1', 'PE2': 'PE-2', 'PE3': 'PE-3'}
 
 
-# ---------------------------------------------------------------------------
-# Normalização de área
-# ---------------------------------------------------------------------------
-
 def normalize_area(raw: str) -> str:
     return _AREA_MAP.get(raw, raw)
 
-
-# ---------------------------------------------------------------------------
-# STEP 1 (parcial): classificação de colunas pelo header
-# ---------------------------------------------------------------------------
 
 def parse_distribuicao_cols(
     headers: tuple,
@@ -119,10 +107,6 @@ def parse_distribuicao_cols(
     return col_map, warnings
 
 
-# ---------------------------------------------------------------------------
-# Pipeline: STEP 1 + 2 + 3
-# ---------------------------------------------------------------------------
-
 def carregar_e_normalizar(
     path: str,
 ) -> tuple[list[dict], dict[str, float], dict[str, float], list[dict]]:
@@ -146,16 +130,13 @@ def carregar_e_normalizar(
     header_found = False
     header_count = 0
 
-    # ── STEP 2 accumulators ──────────────────────────────────────────────────
     expanded_records: list[tuple] = []
     expansion_warnings: list[dict] = []
     raw_sums: dict[str, float] = defaultdict(float)
     atual: dict[str, float] = {}
     sigla_to_funcao: dict[str, list[str]] = defaultdict(list)
 
-    # ── Single pass ──────────────────────────────────────────────────────────
     for row in ws.iter_rows(values_only=True):
-        # ── STEP 1: find and parse header row ────────────────────────────────
         if not header_found:
             if any(c == 'SIGLA' for c in row):
                 header_count += 1
@@ -175,13 +156,11 @@ def carregar_e_normalizar(
                         'tipo': AVISO_HEADER_DUPLICADO,
                         'erro': 'Mais de uma linha contém a célula "SIGLA"; usando a primeira',
                     })
-            continue  # skip pre-header and header rows
+            continue
 
-        # Guard: skip rows that look like duplicate headers
         if sigla_col is not None and sigla_col < len(row) and row[sigla_col] == 'SIGLA':
             continue
 
-        # ── STEP 2: row expansion ────────────────────────────────────────────
         sigla_raw = row[sigla_col] if sigla_col < len(row) else None
         funcao_val = str(
             row[funcao_col] if funcao_col is not None and funcao_col < len(row) else ''
@@ -244,7 +223,6 @@ def carregar_e_normalizar(
     if not header_found:
         raise ValueError("Header row not found — no cell equals 'SIGLA'")
 
-    # ── STEP 3: aggregation ──────────────────────────────────────────────────
     agg: dict[tuple, float] = defaultdict(float)
     for (funcao, md_cobranca, area, qty) in expanded_records:
         agg[(funcao, md_cobranca, area)] += qty
@@ -267,10 +245,6 @@ def carregar_e_normalizar(
     combined = all_warnings + expansion_warnings + agg_warnings
     return normalized, dict(raw_sums), atual, combined
 
-
-# ---------------------------------------------------------------------------
-# STEP 4: validação
-# ---------------------------------------------------------------------------
 
 def validar_distribuicao_cobranca(
     normalized: list[dict],
@@ -311,10 +285,6 @@ def validar_distribuicao_cobranca(
 
     return inconsistencias
 
-
-# ---------------------------------------------------------------------------
-# STEP 5: exportação
-# ---------------------------------------------------------------------------
 
 def exportar_normalizado(records: list[dict], path: str) -> None:
     """Escreve registros normalizados em xlsx. area=None → célula em branco."""
