@@ -12,6 +12,12 @@ Bundled asset:
 import os
 from PyInstaller.utils.hooks import collect_all
 
+# collect_all emits a "font_shapes / circle_shapes / rendering quality will be bad"
+# warning during PyInstaller analysis when building from WSL2. This is expected:
+# the build runs via venv_win (a Windows PE32 executable), which calls GDI32
+# AddFontResourceExW with a \\wsl$ UNC path — GDI32 cannot load fonts from network
+# paths at analysis time. At runtime the .exe extracts to %TEMP% (a local path)
+# and font loading succeeds normally. No fonts are missing from the bundle.
 _ctk_datas, _ctk_binaries, _ctk_hiddenimports = collect_all('customtkinter')
 
 _DIST_XLSX = 'assets/distribuicao_contratual_normalizada.xlsx'

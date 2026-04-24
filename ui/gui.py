@@ -1,7 +1,4 @@
-import contextlib
-import ctypes
 import os
-import platform
 import sys
 import tkinter as tk
 import tkinter.font as tkfont
@@ -86,17 +83,8 @@ janela.title("Automação de Medição")
 janela.geometry("860x560")
 janela.minsize(700, 480)
 
-if platform.system() == "Windows":
-    for _fn in ("IBMPlexSans-Regular.ttf", "IBMPlexSans-SemiBold.ttf"):
-        _fp = os.path.join(base_path, "design", "fonts", _fn)
-        if os.path.exists(_fp):
-            with contextlib.suppress(Exception):
-                ctypes.windll.gdi32.AddFontResourceExW(_fp, 0x10, 0)
-
-janela.update_idletasks()
 _familia = "IBM Plex Sans" if "IBM Plex Sans" in tkfont.families() else "Segoe UI"
-_w = janela.winfo_width()
-_h = janela.winfo_height()
+_w, _h = 860, 560
 _x = (janela.winfo_screenwidth() - _w) // 2
 _y = (janela.winfo_screenheight() - _h) // 2
 janela.geometry(f"{_w}x{_h}+{_x}+{_y}")
