@@ -6,6 +6,7 @@ Normalização e dataclasses de contrato vivem em app/core.py.
 """
 
 import os
+import re
 import unicodedata
 import zipfile
 from xml.etree import ElementTree as ET
@@ -423,6 +424,15 @@ def salvar_via_zip(
             and info.filename != 'xl/calcChain.xml'
         ]
 
+    # Capture all xmlns:* declarations from the original root element before ET
+    # strips them (ET.tostring only emits xmlns for prefixes actually used in
+    # elements/attributes — mc:Ignorable tokens count as attribute values, not
+    # prefix uses, so x14ac and friends get dropped).
+    original_header = xml_bytes[:2000].decode('utf-8', errors='replace')
+    original_ns: dict[str, str] = dict(
+        re.findall(r'xmlns:(\w+)="([^"]+)"', original_header)
+    )
+
     root = ET.fromstring(xml_bytes)
     del xml_bytes
 
@@ -433,10 +443,7 @@ def salvar_via_zip(
 
     xml_str = ET.tostring(root, encoding='unicode')
 
-    for prefix, uri in [
-        ('xr2', 'http://schemas.microsoft.com/office/spreadsheetml/2015/revision2'),
-        ('xr3', 'http://schemas.microsoft.com/office/spreadsheetml/2016/revision3'),
-    ]:
+    for prefix, uri in original_ns.items():
         if f'xmlns:{prefix}=' not in xml_str:
             xml_str = xml_str.replace('<worksheet ', f'<worksheet xmlns:{prefix}="{uri}" ', 1)
 
