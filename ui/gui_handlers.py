@@ -61,7 +61,7 @@ def selecionar_arquivo(titulo: str) -> str:
     )
 
 
-def _executar_fluxo(ctx: GuiContext, titulo_log: str, prompts, montar_kwargs, pre_check_conn=None):
+def _executar_fluxo(ctx: GuiContext, titulo_log: str, prompts, montar_kwargs):
     ctx.desabilitar_botoes()
     ctx.limpar_log()
 
@@ -81,11 +81,6 @@ def _executar_fluxo(ctx: GuiContext, titulo_log: str, prompts, montar_kwargs, pr
         try:
             db.popular_bd_se_vazio(conn)
             db.popular_treinamentos_se_vazio(conn)
-            if pre_check_conn is not None:
-                erro = pre_check_conn(conn)
-                if erro:
-                    ctx.imprimir_log(f"\n[ERRO] {erro}\n")
-                    return
             ctx.imprimir_log("Fase 1/3: Lendo arquivos (modo otimizado)...\n")
             resultado = executar_pipeline(
                 **montar_kwargs(caminhos),
@@ -116,58 +111,7 @@ def iniciar_lancamento(ctx: GuiContext):
             caminho_medicao=c['medicao'],
             caminho_treinamentos=c['treinamentos'],
         ),
-        pre_check_conn=lambda conn: (
-            "Base de Treinamentos não importada. "
-            "Use o botão 'Importar Base de Treinamentos' antes de lançar."
-            if not db.obter_tabela_treinamento(conn) else None
-        ),
     )
-
-
-def iniciar_importar_base_treinamentos(ctx: GuiContext):
-    ctx.desabilitar_botoes()
-    ctx.limpar_log()
-
-    try:
-        conn = db.conectar()
-        registros = db.obter_registro_arquivos(conn)
-        conn.close()
-    except Exception as e:
-        ctx.imprimir_log(f"\n[ERRO] {mensagem_erro(e)}\n")
-        ctx.habilitar_botoes()
-        return
-
-    if 'treinamentos' in registros:
-        info = registros['treinamentos']
-        ctx.imprimir_log(
-            f"Base registrada: {info['caminho']}\n"
-            f"Importada em: {info['importado_em']}\n"
-            "Selecione um novo arquivo para substituir.\n\n"
-        )
-
-    caminho = selecionar_arquivo("Selecione a Base de Treinamentos (xlsx)")
-    if not caminho:
-        ctx.imprimir_log("Operação cancelada: arquivo não foi selecionado.\n")
-        ctx.habilitar_botoes()
-        return
-
-    ctx.imprimir_log("Importando Base de Treinamentos...\n")
-
-    def tarefa():
-        try:
-            conn = db.conectar()
-            try:
-                db.registrar_base_treinamentos(caminho, conn)
-                tabela = db.obter_tabela_treinamento(conn)
-            finally:
-                conn.close()
-            ctx.imprimir_log(f"Base importada: {len(tabela)} treinamentos registrados.\n")
-        except Exception as e:
-            ctx.imprimir_log(f"\n[ERRO] {mensagem_erro(e)}\n")
-        finally:
-            ctx.habilitar_botoes()
-
-    threading.Thread(target=tarefa, daemon=True).start()
 
 
 def iniciar_ferias(ctx: GuiContext):
@@ -206,15 +150,16 @@ def iniciar_validacao(ctx: GuiContext):
     ctx.desabilitar_botoes()
     ctx.limpar_log()
 
+    conn = db.conectar()
     try:
-        conn = db.conectar()
         db.popular_bd_se_vazio(conn)
         registros = db.obter_registro_arquivos(conn)
-        conn.close()
     except Exception as e:
         ctx.imprimir_log(f"\n[ERRO] {mensagem_erro(e)}\n")
         ctx.habilitar_botoes()
         return
+    finally:
+        conn.close()
 
     caminho_bd = None
     caminho_medicao = None
@@ -238,8 +183,8 @@ def iniciar_validacao(ctx: GuiContext):
     ctx.imprimir_log("Executando validação...\n")
 
     def tarefa():
+        conn = db.conectar()
         try:
-            conn = db.conectar()
             avisos_import = []
 
             if caminho_bd:
@@ -254,7 +199,6 @@ def iniciar_validacao(ctx: GuiContext):
             registros_atuais = db.obter_registro_arquivos(conn)
             bd_records       = db.obter_bd(conn)
             medicao_records  = db.obter_medicao(conn)
-            conn.close()
 
             inconsistencias = validar_aderencia_distribuicao(bd_records, medicao_records)
 
@@ -277,6 +221,7 @@ def iniciar_validacao(ctx: GuiContext):
         except Exception as e:
             ctx.imprimir_log(f"\n[ERRO] {mensagem_erro(e)}\n")
         finally:
+            conn.close()
             ctx.habilitar_botoes()
 
     threading.Thread(target=tarefa, daemon=True).start()

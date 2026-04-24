@@ -96,8 +96,8 @@ def executar_pipeline(
         tabela = db.obter_tabela_treinamento(conn)
         if not tabela:
             raise ValueError(
-                "bd_treinamentos está vazio. Execute 'importar-base-treinamentos' "
-                "antes de processar treinamentos."
+                "bd_treinamentos está vazio. Verifique se assets/base_treinamentos.xlsx "
+                "está empacotado e se o bootstrap foi chamado na application boundary."
             )
 
     try:

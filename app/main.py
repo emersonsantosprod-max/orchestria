@@ -64,6 +64,7 @@ def executar_medicao(
     conn = db.conectar()
     try:
         db.popular_bd_se_vazio(conn)
+        db.popular_treinamentos_se_vazio(conn)
         resultado = service.executar_pipeline(
             caminho_medicao=c_medicao,
             caminho_treinamentos=c_treinamentos,
@@ -109,24 +110,6 @@ def _comando_executar_medicao() -> int:
         return 1
 
 
-def _comando_importar_base_treinamentos(args) -> int:
-    try:
-        conn = db.conectar()
-        try:
-            db.registrar_base_treinamentos(args.arquivo, conn)
-            tabela = db.obter_tabela_treinamento(conn)
-            print(f"Base de Treinamentos importada: {len(tabela)} treinamentos registrados.")
-        finally:
-            conn.close()
-        return 0
-    except FileNotFoundError as e:
-        print(f'\n[FALHA] {e}')
-        return 1
-    except Exception as e:
-        print(f'\n[ERRO INESPERADO] {e}')
-        return 1
-
-
 def main():
     import argparse
     parser = argparse.ArgumentParser(prog='automacao')
@@ -140,8 +123,6 @@ def main():
     p_vh = sub.add_parser('validar-hr', help='Valida horas trabalhadas na Medição')
     from app.cli.validar_hr import build_parser as _build_vh
     _build_vh(p_vh)
-    p_ibt = sub.add_parser('importar-base-treinamentos', help='Importa Base de Treinamentos para SQLite')
-    p_ibt.add_argument('--arquivo', required=True, help='Caminho do arquivo Base de Treinamentos.xlsx')
 
     args = parser.parse_args()
     cmd = args.cmd or 'executar'
@@ -166,8 +147,6 @@ def main():
         sys.exit(_m(
             ['--medicao', args.medicao] if args.medicao else []
         ))
-    if cmd == 'importar-base-treinamentos':
-        sys.exit(_comando_importar_base_treinamentos(args))
 
 
 if __name__ == '__main__':

@@ -45,19 +45,6 @@ def test_registrar_base_treinamentos_registra_arquivo(tmp_path, conn):
     assert reg is not None
 
 
-def test_registrar_base_treinamentos_substitui_dados_anteriores(tmp_path, conn):
-    path1 = _make_base_treinamentos_xlsx(tmp_path, [["NR-10", "Remunerado", "8H"]])
-    db.registrar_base_treinamentos(path1, conn)
-
-    v2 = tmp_path / "v2"
-    v2.mkdir()
-    path2 = _make_base_treinamentos_xlsx(v2, [["NR-35", "Não remunerado", "4H"]])
-    db.registrar_base_treinamentos(path2, conn)
-    rows = conn.execute("SELECT nome FROM bd_treinamentos").fetchall()
-    assert len(rows) == 1
-    assert rows[0]["nome"] == "NR-35"
-
-
 def test_obter_tabela_treinamento_retorna_dict_nome_tipo(tmp_path, conn):
     path = _make_base_treinamentos_xlsx(tmp_path, [
         ["NR-10", "Remunerado", "8H"],
