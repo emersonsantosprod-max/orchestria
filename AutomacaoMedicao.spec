@@ -1,12 +1,13 @@
 # -*- mode: python ; coding: utf-8 -*-
 """PyInstaller spec — AutomacaoMedicao.
 
-Bundled asset:
+Bundled assets:
   - `assets/distribuicao_contratual_normalizada.xlsx` é source-of-truth
     versionado (repo privado) e empacotado via PyInstaller `datas=`.
-  - Se ausente no build, o bundle é gerado sem ele e
-    `db.popular_bd_se_vazio()` detecta a ausência em runtime — o fluxo
-    de validação solicita o arquivo ao usuário via GUI/CLI.
+  - `assets/base_treinamentos.xlsx` é source-of-truth da tabela de tipos
+    de treinamentos; empacotado via PyInstaller `datas=`.
+  - Se ausentes no build, os bundles são gerados sem eles e os bootstraps
+    idempotentes detectam a ausência em runtime.
 """
 
 import os
@@ -20,7 +21,8 @@ from PyInstaller.utils.hooks import collect_all
 # and font loading succeeds normally. No fonts are missing from the bundle.
 _ctk_datas, _ctk_binaries, _ctk_hiddenimports = collect_all('customtkinter')
 
-_DIST_XLSX = 'assets/distribuicao_contratual_normalizada.xlsx'
+_DIST_XLSX  = 'assets/distribuicao_contratual_normalizada.xlsx'
+_TRAIN_XLSX = 'assets/base_treinamentos.xlsx'
 _datas = [*_ctk_datas]
 if os.path.exists(_DIST_XLSX):
     _datas.append((_DIST_XLSX, 'assets'))
@@ -29,6 +31,14 @@ else:
         f"[spec] AVISO: '{_DIST_XLSX}' ausente — build prosseguirá sem "
         "o xlsx de bootstrap. Distribuição contratual deverá ser "
         "registrada em runtime."
+    )
+if os.path.exists(_TRAIN_XLSX):
+    _datas.append((_TRAIN_XLSX, 'assets'))
+else:
+    print(
+        f"[spec] AVISO: '{_TRAIN_XLSX}' ausente — build prosseguirá sem "
+        "o xlsx de bootstrap. Base de treinamentos deverá ser "
+        "importada manualmente em runtime."
     )
 
 a = Analysis(

@@ -27,7 +27,7 @@ from pathlib import Path
 import openpyxl
 
 from app.core import normalizar_data
-from app.paths import bundled_distribuicao_xlsx, db_path
+from app.paths import bundled_distribuicao_xlsx, bundled_treinamentos_xlsx, db_path
 
 _HEADER_SCAN_ROWS = 20
 
@@ -225,6 +225,36 @@ def popular_bd_se_vazio(conn: sqlite3.Connection) -> bool:
     try:
         conn.execute('BEGIN')
         registrar_bd(xlsx, conn)
+    except Exception:
+        conn.rollback()
+        raise
+    return True
+
+
+def popular_treinamentos_se_vazio(conn: sqlite3.Connection) -> bool:
+    """Bootstrap idempotente da tabela bd_treinamentos a partir do xlsx empacotado.
+
+    Popula se e somente se:
+      - bd_treinamentos está vazia  E
+      - registro_arquivos não tem entrada para tipo='treinamentos'
+
+    Executa em transação única; rollback em falha. Retorna True se populou,
+    False se já havia dados ou se o xlsx empacotado não estiver disponível.
+    """
+    row_count = conn.execute('SELECT COUNT(*) FROM bd_treinamentos').fetchone()[0]
+    reg = conn.execute(
+        "SELECT 1 FROM registro_arquivos WHERE tipo='treinamentos' LIMIT 1"
+    ).fetchone()
+    if row_count > 0 or reg is not None:
+        return False
+
+    xlsx = bundled_treinamentos_xlsx()
+    if not xlsx.exists():
+        return False
+
+    try:
+        conn.execute('BEGIN')
+        registrar_base_treinamentos(xlsx, conn)
     except Exception:
         conn.rollback()
         raise

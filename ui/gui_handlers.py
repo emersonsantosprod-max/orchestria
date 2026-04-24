@@ -61,7 +61,7 @@ def selecionar_arquivo(titulo: str) -> str:
     )
 
 
-def _executar_fluxo(ctx: GuiContext, titulo_log: str, prompts, montar_kwargs):
+def _executar_fluxo(ctx: GuiContext, titulo_log: str, prompts, montar_kwargs, pre_check_conn=None):
     ctx.desabilitar_botoes()
     ctx.limpar_log()
 
@@ -80,6 +80,12 @@ def _executar_fluxo(ctx: GuiContext, titulo_log: str, prompts, montar_kwargs):
         conn = db.conectar()
         try:
             db.popular_bd_se_vazio(conn)
+            db.popular_treinamentos_se_vazio(conn)
+            if pre_check_conn is not None:
+                erro = pre_check_conn(conn)
+                if erro:
+                    ctx.imprimir_log(f"\n[ERRO] {erro}\n")
+                    return
             ctx.imprimir_log("Fase 1/3: Lendo arquivos (modo otimizado)...\n")
             resultado = executar_pipeline(
                 **montar_kwargs(caminhos),
@@ -110,12 +116,34 @@ def iniciar_lancamento(ctx: GuiContext):
             caminho_medicao=c['medicao'],
             caminho_treinamentos=c['treinamentos'],
         ),
+        pre_check_conn=lambda conn: (
+            "Base de Treinamentos não importada. "
+            "Use o botão 'Importar Base de Treinamentos' antes de lançar."
+            if not db.obter_tabela_treinamento(conn) else None
+        ),
     )
 
 
 def iniciar_importar_base_treinamentos(ctx: GuiContext):
     ctx.desabilitar_botoes()
     ctx.limpar_log()
+
+    try:
+        conn = db.conectar()
+        registros = db.obter_registro_arquivos(conn)
+        conn.close()
+    except Exception as e:
+        ctx.imprimir_log(f"\n[ERRO] {mensagem_erro(e)}\n")
+        ctx.habilitar_botoes()
+        return
+
+    if 'treinamentos' in registros:
+        info = registros['treinamentos']
+        ctx.imprimir_log(
+            f"Base registrada: {info['caminho']}\n"
+            f"Importada em: {info['importado_em']}\n"
+            "Selecione um novo arquivo para substituir.\n\n"
+        )
 
     caminho = selecionar_arquivo("Selecione a Base de Treinamentos (xlsx)")
     if not caminho:

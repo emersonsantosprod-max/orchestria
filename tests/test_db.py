@@ -71,3 +71,41 @@ def test_obter_tabela_treinamento_retorna_dict_nome_tipo(tmp_path, conn):
 def test_obter_tabela_treinamento_retorna_vazio_se_nao_registrada(conn):
     tabela = db.obter_tabela_treinamento(conn)
     assert tabela == {}
+
+
+def test_popular_treinamentos_se_vazio_popula_tabela(tmp_path, conn, monkeypatch):
+    from pathlib import Path
+    xlsx = _make_base_treinamentos_xlsx(tmp_path, [
+        ["NR-10", "Remunerado", "8H"],
+        ["NR-35", "Não remunerado", "4H"],
+    ])
+    monkeypatch.setattr(db, 'bundled_treinamentos_xlsx', lambda: Path(xlsx))
+    result = db.popular_treinamentos_se_vazio(conn)
+    assert result is True
+    tabela = db.obter_tabela_treinamento(conn)
+    assert len(tabela) == 2
+
+
+def test_popular_treinamentos_se_vazio_idempotente_com_dados(tmp_path, conn, monkeypatch):
+    from pathlib import Path
+    xlsx = _make_base_treinamentos_xlsx(tmp_path, [["NR-10", "Remunerado", "8H"]])
+    monkeypatch.setattr(db, 'bundled_treinamentos_xlsx', lambda: Path(xlsx))
+    db.popular_treinamentos_se_vazio(conn)
+    result = db.popular_treinamentos_se_vazio(conn)
+    assert result is False
+
+
+def test_popular_treinamentos_se_vazio_idempotente_com_registro(tmp_path, conn, monkeypatch):
+    from pathlib import Path
+    xlsx = _make_base_treinamentos_xlsx(tmp_path, [["NR-10", "Remunerado", "8H"]])
+    monkeypatch.setattr(db, 'bundled_treinamentos_xlsx', lambda: Path(xlsx))
+    db.registrar_base_treinamentos(xlsx, conn)
+    result = db.popular_treinamentos_se_vazio(conn)
+    assert result is False
+
+
+def test_popular_treinamentos_se_vazio_sem_xlsx_bundled(tmp_path, conn, monkeypatch):
+    monkeypatch.setattr(db, 'bundled_treinamentos_xlsx', lambda: tmp_path / 'inexistente.xlsx')
+    result = db.popular_treinamentos_se_vazio(conn)
+    assert result is False
+    assert db.obter_tabela_treinamento(conn) == {}

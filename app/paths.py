@@ -39,3 +39,9 @@ def bundled_distribuicao_xlsx() -> Path:
     if getattr(sys, 'frozen', False):
         return _bundle_root() / 'assets' / 'distribuicao_contratual_normalizada.xlsx'
     return _project_root() / 'assets' / 'distribuicao_contratual_normalizada.xlsx'
+
+
+def bundled_treinamentos_xlsx() -> Path:
+    if getattr(sys, 'frozen', False):
+        return _bundle_root() / 'assets' / 'base_treinamentos.xlsx'
+    return _project_root() / 'assets' / 'base_treinamentos.xlsx'
