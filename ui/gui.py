@@ -80,11 +80,11 @@ ctk.set_default_color_theme("blue")
 
 janela = ctk.CTk()
 janela.title("Automação de Medição")
-janela.geometry("860x560")
-janela.minsize(700, 480)
+janela.geometry("1080x580")
+janela.minsize(960, 500)
 
 _familia = "IBM Plex Sans" if "IBM Plex Sans" in tkfont.families() else "Segoe UI"
-_w, _h = 860, 560
+_w, _h = 1080, 580
 _x = (janela.winfo_screenwidth() - _w) // 2
 _y = (janela.winfo_screenheight() - _h) // 2
 janela.geometry(f"{_w}x{_h}+{_x}+{_y}")
