@@ -19,6 +19,7 @@ Invariantes:
 
 from __future__ import annotations
 
+import logging
 import os
 import sqlite3
 from dataclasses import dataclass, field
@@ -33,6 +34,8 @@ from app.errors import (
     AutomacaoError,
     PlanilhaInvalidaError,
 )
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -93,6 +96,10 @@ def executar_pipeline(
     treinamento_ativo = bool(caminho_treinamentos and conn is not None)
     ferias_ativo      = bool(caminho_ferias and caminho_base_cobranca)
     atestado_ativo    = bool(caminho_atestado)
+    logger.info(
+        'executar_pipeline: treinamento=%s ferias=%s atestado=%s validar_dist=%s',
+        treinamento_ativo, ferias_ativo, atestado_ativo, validar_distribuicao,
+    )
 
     if not caminho_saida:
         medicao_dir = os.path.dirname(caminho_medicao) or '.'
@@ -112,6 +119,7 @@ def executar_pipeline(
                 "está empacotado e se o bootstrap foi chamado na application boundary."
             )
 
+    logger.info('executar_pipeline: fase 1 (leitura) iniciando')
     try:
         if treinamento_ativo:
             dados = loaders.carregar_dados_treinamento(caminho_treinamentos)
@@ -120,6 +128,7 @@ def executar_pipeline(
         if atestado_ativo:
             dados_atestado = loaders.carregar_dados_atestado(caminho_atestado)
 
+        logger.info('executar_pipeline: lendo medição %s', caminho_medicao)
         wb_ro, sheet_ro = writer.carregar_planilha(
             caminho_medicao, read_only=True, data_only=True
         )
@@ -133,6 +142,7 @@ def executar_pipeline(
          medicao_por_matricula, medicao_records,
          obs_divergentes, desc_divergentes) = writer.indexar_e_ler_dados(sheet_ro, col_map)
         wb_ro.close()
+        logger.info('executar_pipeline: fase 1 concluída (%d chaves indexadas)', len(index))
 
     except FileNotFoundError as e:
         raise ArquivoNaoEncontradoError(str(e)) from e
@@ -143,9 +153,11 @@ def executar_pipeline(
     except Exception as e:
         raise RuntimeError(f"Erro na fase de leitura: {e}") from e
 
+    logger.info('executar_pipeline: fase 2 (domínio) iniciando')
     updates_treinamento = []
     inconst_trein = []
     if treinamento_ativo:
+        logger.info('executar_pipeline: domínio treinamento')
         updates_treinamento, inconst_trein = treinamento.gerar_updates_treinamento(
             dados, tabela, obs_existentes
         )
@@ -153,6 +165,7 @@ def executar_pipeline(
     updates_ferias = []
     inconst_ferias = []
     if ferias_ativo:
+        logger.info('executar_pipeline: domínio férias')
         mes_ref = _mes_referencia(medicao_por_matricula)
         updates_ferias, inconst_ferias = ferias.gerar_updates_ferias(
             dados_ferias,
@@ -167,10 +180,13 @@ def executar_pipeline(
     updates_atestado = []
     inconst_atestado = []
     if atestado_ativo:
+        logger.info('executar_pipeline: domínio atestado')
         updates_atestado, inconst_atestado = atestado.gerar_updates_atestado(dados_atestado)
+    logger.info('executar_pipeline: fase 2 concluída')
 
     # Ordem: treinamento + férias primeiro; atestado em chamada separada.
     # Patches são mesclados com atestado sobrescrevendo (prioridade absoluta).
+    logger.info('executar_pipeline: fase 3 (escrita) iniciando')
     try:
         patches_base, inconst_escrita_base = writer.aplicar_updates(
             updates_treinamento + updates_ferias, col_map, index,
@@ -188,7 +204,9 @@ def executar_pipeline(
         )
         patches = {**patches_base, **patches_atestado}
         inconst_escrita = inconst_escrita_base + inconst_atestado_writer
+        logger.info('executar_pipeline: salvar_via_zip → %s', caminho_saida)
         writer.salvar_via_zip(caminho_medicao, caminho_saida, patches)
+        logger.info('executar_pipeline: fase 3 concluída')
     except PermissionError as e:
         raise ArquivoAbertoError(str(e)) from e
     except AutomacaoError:

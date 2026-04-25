@@ -79,13 +79,19 @@ def _executar_fluxo(ctx: GuiContext, titulo_log: str, prompts, montar_kwargs):
         caminhos[chave] = caminho
 
     ctx.imprimir_log(f"Iniciando {titulo_log}...\n")
+    logger.info('fluxo "%s": iniciando worker thread', titulo_log)
 
     def tarefa():
-        conn = db.conectar()
+        conn = None
         try:
+            logger.info('fluxo "%s": abrindo conexão SQLite', titulo_log)
+            conn = db.conectar()
+            logger.info('fluxo "%s": popular_bd_se_vazio', titulo_log)
             db.popular_bd_se_vazio(conn)
+            logger.info('fluxo "%s": popular_treinamentos_se_vazio', titulo_log)
             db.popular_treinamentos_se_vazio(conn)
             ctx.imprimir_log("Fase 1/3: Lendo arquivos (modo otimizado)...\n")
+            logger.info('fluxo "%s": executar_pipeline', titulo_log)
             resultado = executar_pipeline(
                 **montar_kwargs(caminhos),
                 conn=conn,
@@ -94,11 +100,16 @@ def _executar_fluxo(ctx: GuiContext, titulo_log: str, prompts, montar_kwargs):
             ctx.imprimir_log("Fase 2/3: Processando regras de negócio...\n")
             ctx.imprimir_log("Fase 3/3: Gravando resultados no Excel (isso pode demorar)...\n")
             ctx.marshal_to_main(lambda: mostrar_resultado(ctx, resultado))
+            logger.info('fluxo "%s": concluído', titulo_log)
         except Exception as e:
             logger.exception('Erro no fluxo %s', titulo_log)
             ctx.imprimir_log(f"\n[ERRO] {mensagem_erro(e)}\n")
         finally:
-            conn.close()
+            try:
+                if conn is not None:
+                    conn.close()
+            except Exception:
+                logger.exception('Falha ao fechar conexão SQLite (ignorada)')
             ctx.habilitar_botoes()
 
     threading.Thread(target=tarefa, daemon=True).start()
@@ -155,16 +166,22 @@ def iniciar_validacao(ctx: GuiContext):
     ctx.desabilitar_botoes()
     ctx.limpar_log()
 
-    conn = db.conectar()
+    conn = None
     try:
+        conn = db.conectar()
         db.popular_bd_se_vazio(conn)
         registros = db.obter_registro_arquivos(conn)
     except Exception as e:
+        logger.exception('Erro no preâmbulo de validação')
         ctx.imprimir_log(f"\n[ERRO] {mensagem_erro(e)}\n")
         ctx.habilitar_botoes()
         return
     finally:
-        conn.close()
+        try:
+            if conn is not None:
+                conn.close()
+        except Exception:
+            logger.exception('Falha ao fechar conexão SQLite (ignorada)')
 
     caminho_bd = None
     caminho_medicao = None
@@ -188,8 +205,9 @@ def iniciar_validacao(ctx: GuiContext):
     ctx.imprimir_log("Executando validação...\n")
 
     def tarefa():
-        conn = db.conectar()
+        conn = None
         try:
+            conn = db.conectar()
             avisos_import = []
 
             if caminho_bd:
@@ -227,7 +245,11 @@ def iniciar_validacao(ctx: GuiContext):
             logger.exception('Erro na validação de distribuição')
             ctx.imprimir_log(f"\n[ERRO] {mensagem_erro(e)}\n")
         finally:
-            conn.close()
+            try:
+                if conn is not None:
+                    conn.close()
+            except Exception:
+                logger.exception('Falha ao fechar conexão SQLite (ignorada)')
             ctx.habilitar_botoes()
 
     threading.Thread(target=tarefa, daemon=True).start()

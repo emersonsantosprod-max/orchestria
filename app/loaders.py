@@ -8,6 +8,7 @@ Não contém lógica de negócio nem conhecimento da ordem do pipeline.
 from __future__ import annotations
 
 import contextlib
+import logging
 import os
 import tempfile
 import unicodedata
@@ -16,6 +17,8 @@ import openpyxl
 import pandas as pd
 
 from app.errors import PlanilhaInvalidaError
+
+logger = logging.getLogger(__name__)
 
 _COL_DATA_HR    = 0
 _COL_RE_HR      = 1
@@ -27,6 +30,7 @@ def carregar_dados_treinamento(caminho_treinamentos: str) -> list[dict]:
     if not os.path.exists(caminho_treinamentos):
         raise FileNotFoundError(f"Arquivo não encontrado: {caminho_treinamentos}")
 
+    logger.info('carregar_dados_treinamento: abrindo %s', caminho_treinamentos)
     dados = []
     wb = openpyxl.load_workbook(caminho_treinamentos, read_only=True, data_only=True)
     for idx, row in enumerate(wb.active.iter_rows(min_row=3, values_only=True), start=3):
@@ -44,6 +48,7 @@ def carregar_dados_treinamento(caminho_treinamentos: str) -> list[dict]:
             'carga':       str(row[7]).strip() if row[7] is not None else '',
         })
     wb.close()
+    logger.info('carregar_dados_treinamento: %d registros lidos', len(dados))
 
     return dados
 

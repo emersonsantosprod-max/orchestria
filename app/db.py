@@ -20,6 +20,7 @@ medição é sempre ephemeral dentro do pipeline.
 
 from __future__ import annotations
 
+import logging
 import sqlite3
 from datetime import datetime
 from pathlib import Path
@@ -28,6 +29,8 @@ import openpyxl
 
 from app.core import normalizar_data
 from app.paths import bundled_distribuicao_xlsx, bundled_treinamentos_xlsx, db_path
+
+logger = logging.getLogger(__name__)
 
 _HEADER_SCAN_ROWS = 20
 
@@ -67,14 +70,23 @@ def conectar(path: Path | str | None = None) -> sqlite3.Connection:
     """Abre conexão no caminho canônico (app.paths.db_path()).
 
     `path` pode ser sobrescrito (útil em testes com tmp_path ou ':memory:').
+
+    Hardening: timeout=5s + WAL + busy_timeout=5000 garantem que travas
+    pendentes de runs anteriores transformam um wait infinito em
+    OperationalError dentro de ~5s — recuperável pela boundary GUI/CLI.
     """
     resolved = path if path is not None else db_path()
+    logger.info('db.conectar: abrindo %s', resolved)
     if str(resolved) != ':memory:':
         Path(resolved).parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(resolved)
+    conn = sqlite3.connect(resolved, timeout=5)
     conn.row_factory = sqlite3.Row
+    if str(resolved) != ':memory:':
+        conn.execute('PRAGMA journal_mode=WAL')
+    conn.execute('PRAGMA busy_timeout=5000')
     conn.executescript(_SCHEMA)
     conn.commit()
+    logger.info('db.conectar: conexão pronta (%s)', resolved)
     return conn
 
 
@@ -86,6 +98,7 @@ def _normalizar_pct(value) -> float:
 
 
 def registrar_bd(path: str | Path, conn: sqlite3.Connection) -> None:
+    logger.info('registrar_bd: lendo %s', path)
     wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
     ws = wb.active
     records = []
@@ -102,6 +115,7 @@ def registrar_bd(path: str | Path, conn: sqlite3.Connection) -> None:
         quantidade  = float(row[3]) if row[3] is not None else 0.0
         records.append((funcao, md_cobranca, area, quantidade))
     wb.close()
+    logger.info('registrar_bd: %d linhas extraídas', len(records))
 
     conn.execute('DELETE FROM bd_distribuicao')
     conn.executemany(
@@ -211,23 +225,29 @@ def popular_bd_se_vazio(conn: sqlite3.Connection) -> bool:
     Executa em transação única; rollback em falha. Retorna True se populou,
     False se já havia dados ou se o xlsx empacotado não estiver disponível.
     """
+    logger.info('popular_bd_se_vazio: verificando estado atual')
     row_count = conn.execute('SELECT COUNT(*) FROM bd_distribuicao').fetchone()[0]
     reg = conn.execute(
         "SELECT 1 FROM registro_arquivos WHERE tipo='bd' LIMIT 1"
     ).fetchone()
     if row_count > 0 or reg is not None:
+        logger.info('popular_bd_se_vazio: já populado, no-op')
         return False
 
     xlsx = bundled_distribuicao_xlsx()
     if not xlsx.exists():
+        logger.info('popular_bd_se_vazio: xlsx empacotado ausente em %s', xlsx)
         return False
 
+    logger.info('popular_bd_se_vazio: bootstrap a partir de %s', xlsx)
     try:
         conn.execute('BEGIN')
         registrar_bd(xlsx, conn)
     except Exception:
         conn.rollback()
+        logger.exception('popular_bd_se_vazio: rollback após falha')
         raise
+    logger.info('popular_bd_se_vazio: bootstrap concluído')
     return True
 
 
@@ -241,23 +261,29 @@ def popular_treinamentos_se_vazio(conn: sqlite3.Connection) -> bool:
     Executa em transação única; rollback em falha. Retorna True se populou,
     False se já havia dados ou se o xlsx empacotado não estiver disponível.
     """
+    logger.info('popular_treinamentos_se_vazio: verificando estado atual')
     row_count = conn.execute('SELECT COUNT(*) FROM bd_treinamentos').fetchone()[0]
     reg = conn.execute(
         "SELECT 1 FROM registro_arquivos WHERE tipo='treinamentos' LIMIT 1"
     ).fetchone()
     if row_count > 0 or reg is not None:
+        logger.info('popular_treinamentos_se_vazio: já populado, no-op')
         return False
 
     xlsx = bundled_treinamentos_xlsx()
     if not xlsx.exists():
+        logger.info('popular_treinamentos_se_vazio: xlsx empacotado ausente em %s', xlsx)
         return False
 
+    logger.info('popular_treinamentos_se_vazio: bootstrap a partir de %s', xlsx)
     try:
         conn.execute('BEGIN')
         registrar_base_treinamentos(xlsx, conn)
     except Exception:
         conn.rollback()
+        logger.exception('popular_treinamentos_se_vazio: rollback após falha')
         raise
+    logger.info('popular_treinamentos_se_vazio: bootstrap concluído')
     return True
 
 
@@ -284,6 +310,7 @@ def obter_registro_arquivos(conn: sqlite3.Connection) -> dict[str, dict]:
 
 def registrar_base_treinamentos(path: str | Path, conn: sqlite3.Connection) -> None:
     """Import Base de Treinamentos.xlsx into SQLite bd_treinamentos table."""
+    logger.info('registrar_base_treinamentos: lendo %s', path)
     wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
     records = []
     for row in wb.active.iter_rows(min_row=2, values_only=True):
@@ -294,6 +321,7 @@ def registrar_base_treinamentos(path: str | Path, conn: sqlite3.Connection) -> N
         tipo = 'nao_remunerado' if ('não' in tipo_raw or 'nao' in tipo_raw) else 'remunerado'
         records.append((nome, tipo))
     wb.close()
+    logger.info('registrar_base_treinamentos: %d treinamentos extraídos', len(records))
 
     conn.execute('DELETE FROM bd_treinamentos')
     conn.executemany(

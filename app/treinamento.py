@@ -19,6 +19,7 @@ Erros detectados em writer.py (fora do escopo):
   - 'data não encontrada'
 """
 
+import logging
 import re
 from collections import defaultdict
 
@@ -29,6 +30,8 @@ from app.core import (
     inconsistencia,
     normalizar_matricula,
 )
+
+logger = logging.getLogger(__name__)
 
 _RE_CARGA = re.compile(r'(\d+)H')
 _RE_INTERVALO = re.compile(r'(\d{1,2})\s+À\s+(\d{1,2})/(\d{2})/(\d{4})')
@@ -138,6 +141,7 @@ def gerar_updates_treinamento(
     if observacoes_existentes is None:
         observacoes_existentes = {}
 
+    logger.info('gerar_updates_treinamento: %d registros de entrada', len(dados))
     inconsistencias = []
     registros_expandidos = []
 
@@ -218,4 +222,8 @@ def gerar_updates_treinamento(
             row=None,
         ))
 
+    logger.info(
+        'gerar_updates_treinamento: %d updates, %d inconsistencias',
+        len(atualizacoes), len(inconsistencias),
+    )
     return atualizacoes, inconsistencias
