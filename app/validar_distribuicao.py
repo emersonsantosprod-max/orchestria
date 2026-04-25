@@ -11,10 +11,13 @@ Regras:
 
 from __future__ import annotations
 
-from collections import defaultdict
+from collections import Counter, defaultdict
 from dataclasses import dataclass
+from datetime import datetime
+from pathlib import Path
 
 from app import core
+from app.paths import saida_dir
 
 ERRO_LINHA_AUSENTE       = 'ERRO_LINHA_AUSENTE'
 ERRO_INSUFICIENCIA_RATEIO = 'ERRO_INSUFICIENCIA_RATEIO'
@@ -112,12 +115,6 @@ def validar_para_dominio(
         for inc in validar_aderencia_distribuicao(bd_records, medicao_snapshot)
     ]
 
-
-from collections import Counter  # noqa: E402
-from datetime import datetime  # noqa: E402
-from pathlib import Path  # noqa: E402
-
-_DIR_SAIDA = Path('data/saida')
 
 SEP_SECAO = '═' * 80
 SEP_LINHA  = '─' * 70
@@ -242,8 +239,9 @@ def gerar_relatorio(
 
 
 def _salvar_relatorio(conteudo: str) -> Path:
-    _DIR_SAIDA.mkdir(parents=True, exist_ok=True)
+    destino = saida_dir()
+    destino.mkdir(parents=True, exist_ok=True)
     ts = datetime.now().strftime('%Y%m%d_%H%M%S')
-    caminho = _DIR_SAIDA / f'relatorio_validacao_distribuicao_{ts}.txt'
+    caminho = destino / f'relatorio_validacao_distribuicao_{ts}.txt'
     caminho.write_text(conteudo, encoding='utf-8')
     return caminho

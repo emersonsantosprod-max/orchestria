@@ -35,6 +35,16 @@ def db_path() -> Path:
     return _project_root() / 'data' / 'automacao.db'
 
 
+def saida_dir() -> Path:
+    root = _exe_dir() if getattr(sys, 'frozen', False) else _project_root()
+    return root / 'data' / 'saida'
+
+
+def logs_dir() -> Path:
+    root = _exe_dir() if getattr(sys, 'frozen', False) else _project_root()
+    return root / 'logs'
+
+
 def bundled_distribuicao_xlsx() -> Path:
     if getattr(sys, 'frozen', False):
         return _bundle_root() / 'assets' / 'distribuicao_contratual_normalizada.xlsx'

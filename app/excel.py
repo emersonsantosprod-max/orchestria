@@ -163,6 +163,9 @@ def mapear_colunas(sheet) -> dict:
 
         if all(k in mapeamento for k in _OBRIGATORIAS):
             mapeamento['_header_row'] = row_idx
+            mapeamento['_ausentes'] = tuple(
+                k for k in alvos if k not in mapeamento
+            )
             return mapeamento
 
     raise ValueError(
@@ -173,10 +176,10 @@ def mapear_colunas(sheet) -> dict:
 
 def indexar_e_ler_dados(sheet, col_map: dict) -> tuple:
     """
-    Retorna (sempre tupla de 7):
+    Retorna (sempre tupla de 9):
       index                : {(matricula, data_str): [row_1based, ...]}
-      obs_existentes       : {(matricula, data_str): str}
-      descontos_existentes : {(matricula, data_str): int_minutos}
+      obs_existentes       : {(matricula, data_str): str}     — last-write-wins
+      descontos_existentes : {(matricula, data_str): int_min} — last-write-wins
       md_cobranca_por_chave: {(matricula, data_str): str_UPPER}
       sg_funcao_por_chave  : {(matricula, data_str): str_UPPER}
       medicao_por_matricula: {matricula: [(date_obj, data_str, [rows]), ...]}
@@ -185,6 +188,9 @@ def indexar_e_ler_dados(sheet, col_map: dict) -> tuple:
                              validar_distribuicao.validar_para_dominio sem
                              segunda leitura. Requer col_map com sg_funcao,
                              md_cobranca e pct_cobranca; caso contrário list vazia.
+      obs_divergentes      : set[(mat,data)] onde rows múltiplas têm obs distintas
+                             (last-write-wins silenciaria — writer emite warning).
+      desc_divergentes     : set[(mat,data)] análogo para desconto.
     """
     index = {}
     obs_existentes = {}
@@ -192,6 +198,8 @@ def indexar_e_ler_dados(sheet, col_map: dict) -> tuple:
     md_cobranca_por_chave = {}
     sg_funcao_por_chave = {}
     medicao_records: list[dict] = []
+    obs_divergentes: set = set()
+    desc_divergentes: set = set()
 
     col_re   = col_map['matricula']
     col_dt   = col_map['data']
@@ -218,8 +226,14 @@ def indexar_e_ler_dados(sheet, col_map: dict) -> tuple:
         if chave not in index:
             index[chave] = []
         index[chave].append(row_idx)
-        obs_existentes[chave] = str(row[col_obs]).strip() if row[col_obs] else ''
-        descontos_existentes[chave] = _core_converter_desconto_para_minutos(row[col_desc])
+        obs_atual = str(row[col_obs]).strip() if row[col_obs] else ''
+        desc_atual = _core_converter_desconto_para_minutos(row[col_desc])
+        if chave in obs_existentes and obs_existentes[chave] != obs_atual:
+            obs_divergentes.add(chave)
+        if chave in descontos_existentes and descontos_existentes[chave] != desc_atual:
+            desc_divergentes.add(chave)
+        obs_existentes[chave] = obs_atual
+        descontos_existentes[chave] = desc_atual
 
         if col_mdc is not None and row[col_mdc] is not None:
             md_cobranca_por_chave[chave] = str(row[col_mdc]).strip().upper()
@@ -261,6 +275,8 @@ def indexar_e_ler_dados(sheet, col_map: dict) -> tuple:
         sg_funcao_por_chave,
         medicao_por_matricula,
         medicao_records,
+        obs_divergentes,
+        desc_divergentes,
     )
 
 
@@ -270,6 +286,8 @@ def aplicar_updates(
     index: dict,
     obs_existentes: dict = None,
     descontos_existentes: dict = None,
+    obs_divergentes: set = None,
+    desc_divergentes: set = None,
 ) -> tuple:
     """
     Aplica a lista unificada de Update e retorna (patches, inconsistencias).
@@ -293,6 +311,11 @@ def aplicar_updates(
         obs_existentes = {}
     if descontos_existentes is None:
         descontos_existentes = {}
+    if obs_divergentes is None:
+        obs_divergentes = set()
+    if desc_divergentes is None:
+        desc_divergentes = set()
+    chaves_divergencia_emitida: set = set()
 
     max_row_known = max((r for rows in index.values() for r in rows), default=0)
 
@@ -333,6 +356,18 @@ def aplicar_updates(
                 rows = [rows]
             target_rows = rows
 
+        chave_div = (mat, data)
+        if (
+            upd.tipo == 'treinamento'
+            and chave_div not in chaves_divergencia_emitida
+            and (chave_div in obs_divergentes or chave_div in desc_divergentes)
+        ):
+            chaves_divergencia_emitida.add(chave_div)
+            inconsistencias.append(inconsistencia(
+                'writer', matricula=mat, data=data,
+                erro='observação/desconto divergente entre linhas duplicadas — aplicação pode sobrescrever conteúdo',
+            ))
+
         obs_final = None
         if upd.observacao is not None:
             if upd.sobrescrever_obs:
@@ -342,12 +377,23 @@ def aplicar_updates(
                 existente = obs_existentes.get((mat, data), '')
                 obs_final = deduplicar_observacao(existente, novas)
 
-        # Desconto: soma aritmética com existente (mecânica, não decisão de negócio)
+        # Desconto: soma aritmética com existente (mecânica, não decisão de negócio).
+        # Guard: se a célula de observação já contém marcador de treinamento
+        # ('TREIN.'), tratar como re-execução: não somar (evita duplicar minutos)
+        # e emitir inconsistência. Aplica somente para tipo='treinamento'; férias
+        # e atestado não somam desconto.
         desconto_str = None
         if upd.desconto_min is not None and upd.desconto_min > 0:
             existente_min = descontos_existentes.get((mat, data), 0)
-            total_min = upd.desconto_min + existente_min
-            desconto_str = _core_converter_minutos_para_hhmmss(total_min)
+            obs_celula = obs_existentes.get((mat, data), '') or ''
+            if upd.tipo == 'treinamento' and 'TREIN.' in obs_celula:
+                inconsistencias.append(inconsistencia(
+                    'writer', matricula=mat, data=data,
+                    erro='desconto de treinamento já aplicado — re-execução?',
+                ))
+            else:
+                total_min = upd.desconto_min + existente_min
+                desconto_str = _core_converter_minutos_para_hhmmss(total_min)
 
         sit = upd.situacao
 

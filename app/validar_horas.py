@@ -15,7 +15,10 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-LIMITE_HH = 9 + 10 / 60
+from app.core import LIMITE_HORAS_TRABALHADAS
+from app.paths import saida_dir
+
+LIMITE_HH = LIMITE_HORAS_TRABALHADAS
 
 ERRO_HORAS_NEGATIVAS = 'ERRO_HORAS_NEGATIVAS'
 ERRO_HORAS_EXCESSO   = 'ERRO_HORAS_EXCESSO'
@@ -51,8 +54,6 @@ def validar_horas_trabalhadas(registros: list[dict]) -> list[InconsistenciaHr]:
         ))
     return sorted(result, key=lambda x: (x.data, x.matricula))
 
-
-_DIR_SAIDA = Path('data/saida')
 
 SEP_SECAO = '═' * 80
 SEP_LINHA  = '─' * 70
@@ -155,8 +156,9 @@ def gerar_relatorio(
 
 
 def _salvar_relatorio(conteudo: str) -> Path:
-    _DIR_SAIDA.mkdir(parents=True, exist_ok=True)
+    destino = saida_dir()
+    destino.mkdir(parents=True, exist_ok=True)
     ts = datetime.now().strftime('%Y%m%d_%H%M%S')
-    caminho = _DIR_SAIDA / f'relatorio_validacao_horas_{ts}.txt'
+    caminho = destino / f'relatorio_validacao_horas_{ts}.txt'
     caminho.write_text(conteudo, encoding='utf-8')
     return caminho

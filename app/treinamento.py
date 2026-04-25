@@ -23,6 +23,7 @@ import re
 from collections import defaultdict
 
 from app.core import (
+    LIMITE_HORAS_TRABALHADAS,
     Update,
     deduplicar_observacao,
     inconsistencia,
@@ -89,7 +90,7 @@ def agrupar_por_matricula_data(registros: list) -> dict:
     return dict(grupos)
 
 
-LIMITE_HH = 9 + 10/60   # 9h10 exatos (= 9.16666..., igual ao Excel)
+LIMITE_HH = LIMITE_HORAS_TRABALHADAS
 
 
 def calcular_desconto(horas_nao_rem: int, horas_total: int) -> float:

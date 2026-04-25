@@ -26,10 +26,12 @@ from dataclasses import dataclass, field
 from app import atestado, db, ferias, loaders, treinamento
 from app import excel as writer
 from app import validar_distribuicao as vdist
+from app.core import inconsistencia
 from app.errors import (
     ArquivoAbertoError,
     ArquivoNaoEncontradoError,
     AutomacaoError,
+    PlanilhaInvalidaError,
 )
 
 
@@ -46,14 +48,24 @@ class Resultado:
 
 
 def _mes_referencia(medicao_por_matricula: dict):
-    """Deriva mês alvo da menor data do índice da Medição."""
-    todas = (
+    """Deriva mês alvo da menor data do índice da Medição.
+
+    Levanta PlanilhaInvalidaError se as datas atravessarem mais de um mês —
+    férias derivam a janela de aplicação a partir desse mês inferido, e datas
+    em meses distintos silenciariam metade do período de férias.
+    """
+    todas = [
         d for entradas in medicao_por_matricula.values() for d, _, _ in entradas
-    )
-    menor = min(todas, default=None)
-    if menor is None:
+    ]
+    if not todas:
         raise RuntimeError("Medição não contém datas válidas para inferir mês de referência.")
-    return menor.replace(day=1)
+    meses = {(d.year, d.month) for d in todas}
+    if len(meses) > 1:
+        rotulos = sorted(f"{ano:04d}-{mes:02d}" for ano, mes in meses)
+        raise PlanilhaInvalidaError(
+            "Medição contém datas em múltiplos meses: " + ", ".join(rotulos)
+        )
+    return min(todas).replace(day=1)
 
 
 def executar_pipeline(
@@ -112,9 +124,14 @@ def executar_pipeline(
             caminho_medicao, read_only=True, data_only=True
         )
         col_map = writer.mapear_colunas(sheet_ro)
+        faltantes_validacao = [
+            k for k in ('sg_funcao', 'md_cobranca', 'pct_cobranca')
+            if k in col_map.get('_ausentes', ())
+        ]
         (index, obs_existentes, descontos_existentes,
          md_cobranca_por_chave, sg_funcao_por_chave,
-         medicao_por_matricula, medicao_records) = writer.indexar_e_ler_dados(sheet_ro, col_map)
+         medicao_por_matricula, medicao_records,
+         obs_divergentes, desc_divergentes) = writer.indexar_e_ler_dados(sheet_ro, col_map)
         wb_ro.close()
 
     except FileNotFoundError as e:
@@ -150,7 +167,7 @@ def executar_pipeline(
     updates_atestado = []
     inconst_atestado = []
     if atestado_ativo:
-        updates_atestado, inconst_atestado = atestado.processar_atestados(dados_atestado)
+        updates_atestado, inconst_atestado = atestado.gerar_updates_atestado(dados_atestado)
 
     # Ordem: treinamento + férias primeiro; atestado em chamada separada.
     # Patches são mesclados com atestado sobrescrevendo (prioridade absoluta).
@@ -159,11 +176,15 @@ def executar_pipeline(
             updates_treinamento + updates_ferias, col_map, index,
             obs_existentes=obs_existentes,
             descontos_existentes=descontos_existentes,
+            obs_divergentes=obs_divergentes,
+            desc_divergentes=desc_divergentes,
         )
         patches_atestado, inconst_atestado_writer = writer.aplicar_updates(
             updates_atestado, col_map, index,
             obs_existentes=obs_existentes,
             descontos_existentes=descontos_existentes,
+            obs_divergentes=obs_divergentes,
+            desc_divergentes=desc_divergentes,
         )
         patches = {**patches_base, **patches_atestado}
         inconst_escrita = inconst_escrita_base + inconst_atestado_writer
@@ -179,7 +200,16 @@ def executar_pipeline(
     if validar_distribuicao:
         bd_records = db.obter_bd(conn)
         if bd_records:
-            inconst_validacao = vdist.validar_para_dominio(bd_records, medicao_records)
+            if faltantes_validacao:
+                inconst_validacao = [inconsistencia(
+                    origem='writer',
+                    erro=(
+                        "validar_distribuicao=True ignorado: medição sem colunas "
+                        + ", ".join(faltantes_validacao)
+                    ),
+                )]
+            else:
+                inconst_validacao = vdist.validar_para_dominio(bd_records, medicao_records)
 
     return Resultado(
         processados=len(dados),

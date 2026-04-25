@@ -6,6 +6,7 @@ Este módulo só resolve caminhos default, interpreta flags opt-in e formata
 saída terminal.
 """
 
+import logging
 import os
 import sys
 
@@ -13,6 +14,9 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app import db
 from app import pipeline as service
+from app.logging_config import setup_logging
+
+logger = logging.getLogger(__name__)
 
 salvar_relatorio_inconsistencias = service.salvar_relatorio_inconsistencias
 
@@ -103,14 +107,17 @@ def _comando_executar_medicao() -> int:
         exibir_resumo(resultado)
         return 0
     except RuntimeError as e:
+        logger.exception('Falha no pipeline')
         print(f'\n[FALHA] {e}')
         return 1
     except Exception as e:
+        logger.exception('Erro inesperado no pipeline')
         print(f'\n[ERRO INESPERADO] {e}')
         return 1
 
 
 def main():
+    setup_logging()
     import argparse
     parser = argparse.ArgumentParser(prog='automacao')
     sub = parser.add_subparsers(dest='cmd')

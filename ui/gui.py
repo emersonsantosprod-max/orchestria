@@ -18,6 +18,7 @@ app_path = os.path.join(base_path, "app")
 if app_path not in sys.path:
     sys.path.append(app_path)
 
+from app.logging_config import setup_logging
 from ui.gui_handlers import (
     GuiContext,
     iniciar_atestado,
@@ -26,6 +27,8 @@ from ui.gui_handlers import (
     iniciar_validacao,
     iniciar_validar_hr,
 )
+
+setup_logging()
 
 _CHUMBO      = "#232323"
 _CHUMBO_2    = "#111111"
@@ -172,6 +175,7 @@ _ctx = GuiContext(
     limpar_log=_limpar_log,
     desabilitar_botoes=_desabilitar_botoes,
     habilitar_botoes=_habilitar_botoes,
+    marshal_to_main=lambda fn: janela.after(0, fn),
 )
 
 frame_lancar = ctk.CTkFrame(painel_botoes, fg_color=_PAINEL, corner_radius=0)

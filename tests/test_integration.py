@@ -36,8 +36,11 @@ def test_fluxo_completo(tmp_path):
     assert res.processados == 3
     # User 111 teve 2 treinamentos no mesmo dia (agrupa em 1) e User 222 teve 1 em multi-dia (expande em 2). 1+2 = 3.
     assert res.atualizados == 3
-    # Nenhuma inconsistência deve rolar se o RE estiver certinho
-    assert len(res.inconsistencias) == 0
+    # Esperamos exatamente 1 aviso: medicao_mock não possui colunas
+    # sg_funcao/md_cobranca/pct_cobranca, então validar_distribuicao=True
+    # solicitada por main.executar_medicao é ignorada com aviso explícito.
+    assert len(res.inconsistencias) == 1
+    assert 'validar_distribuicao=True ignorado' in res.inconsistencias[0].erro
 
     # Validações internas do conteúdo salvo no Excel final
     wb = openpyxl.load_workbook(saida)

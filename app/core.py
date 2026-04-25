@@ -26,6 +26,8 @@ from typing import Literal
 _RE_DDMMYYYY = re.compile(r'\d{2}/\d{2}/\d{4}$')
 _RE_HHMMSS   = re.compile(r'^(\d{1,2}):(\d{2})(?::(\d{2}))?$')
 
+LIMITE_HORAS_TRABALHADAS = 9 + 10 / 60
+
 
 def normalizar_matricula(valor) -> str:
     """

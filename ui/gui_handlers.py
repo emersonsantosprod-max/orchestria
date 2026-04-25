@@ -1,5 +1,6 @@
 """Handlers da GUI: fluxos assíncronos de treinamento/férias/atestado/validação."""
 
+import logging
 import os
 import threading
 from collections.abc import Callable
@@ -28,6 +29,8 @@ from app.validar_horas import (
     validar_horas_trabalhadas as _validar_hr,
 )
 
+logger = logging.getLogger(__name__)
+
 
 @dataclass
 class GuiContext:
@@ -35,6 +38,7 @@ class GuiContext:
     limpar_log: Callable[[], None]
     desabilitar_botoes: Callable[[], None]
     habilitar_botoes: Callable[[], None]
+    marshal_to_main: Callable[[Callable[[], None]], None]
 
 
 def mensagem_erro(exc: BaseException) -> str:
@@ -89,8 +93,9 @@ def _executar_fluxo(ctx: GuiContext, titulo_log: str, prompts, montar_kwargs):
             )
             ctx.imprimir_log("Fase 2/3: Processando regras de negócio...\n")
             ctx.imprimir_log("Fase 3/3: Gravando resultados no Excel (isso pode demorar)...\n")
-            mostrar_resultado(ctx, resultado)
+            ctx.marshal_to_main(lambda: mostrar_resultado(ctx, resultado))
         except Exception as e:
+            logger.exception('Erro no fluxo %s', titulo_log)
             ctx.imprimir_log(f"\n[ERRO] {mensagem_erro(e)}\n")
         finally:
             conn.close()
@@ -219,6 +224,7 @@ def iniciar_validacao(ctx: GuiContext):
                 ctx.imprimir_log(f"[AVISO] {av}\n")
 
         except Exception as e:
+            logger.exception('Erro na validação de distribuição')
             ctx.imprimir_log(f"\n[ERRO] {mensagem_erro(e)}\n")
         finally:
             conn.close()
@@ -248,6 +254,7 @@ def iniciar_validar_hr(ctx: GuiContext):
             ctx.imprimir_log(f"Relatório gerado em: {caminho_rel}\n")
             ctx.imprimir_log(f"Total de inconsistências: {len(inconsistencias)}\n")
         except Exception as e:
+            logger.exception('Erro na validação de horas trabalhadas')
             ctx.imprimir_log(f"\n[ERRO] {mensagem_erro(e)}\n")
         finally:
             ctx.habilitar_botoes()
