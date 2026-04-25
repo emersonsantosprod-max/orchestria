@@ -9,6 +9,8 @@ paths:
 
 ### Naming
 - Pattern: verb + object + context — validar_intervalo_datas_medicao(), not validar().
+- Example contrast: gerar_updates_treinamento (verb + object + context),
+  not processar_treinamento or run_treinamento.
 - Every name must resolve in a single grep.
 - Banned generic tokens: process, handle, run, utils, helpers, common,
   and processar when used without specific object+context.

@@ -1,6 +1,7 @@
 # PROJECT_STRUCTURE.md
 
 app/core.py → shared types (Update, Inconsistencia) + factories; dataclasses puras
+app/errors.py → exceções tipadas do domínio (AutomacaoError, PlanilhaInvalidaError…).
 app/loaders.py → extract data from entrada/ xlsx; no business logic → feeds pipeline
 app/ferias.py → férias processing: validations, calculations, inconsistencies
 app/treinamento.py → treinamentos processing: validations, calculations
@@ -9,14 +10,19 @@ app/distribuicao_contratual.py → normalização da distribuição contratual (
 app/validar_distribuicao.py → validação BD vs Medição + mapeamento `validar_para_dominio` (boundary pública para o pipeline)
 app/validar_horas.py → validação de Hr Trabalhadas (col 19): limites 0 ≤ valor ≤ LIMITE_HH (9h10min); sem DB.
 app/db.py → SQLite: registrar_bd/medicao, obter_*, popular_bd_se_vazio (bootstrap idempotente)
-app/paths.py → resolução determinística de caminhos (dev vs PyInstaller frozen). SSOT para `db_path()` e xlsx empacotado.
+app/paths.py → resolução determinística de caminhos (dev vs PyInstaller frozen). SSOT para `db_path()`, `saida_dir()`, `logs_dir()` e xlsx empacotado.
+app/logging_config.py → `setup_logging()` idempotente; rotating handler em `logs/automacao.log` (1 MiB × 5 backups).
 app/excel.py → Excel I/O: read entrada/, write saida/ via `salvar_via_zip`; não importa módulos de domínio
 app/pipeline.py → orquestração pura: load → process → apply → (opcional) validar_distribuicao. Recebe `conn` via DI; não executa bootstrap.
-app/main.py → CLI entry-point; argparse com subcomandos: `executar` (default) | `normalizar` | `validar-dist` | `validar-consist`. Executa bootstrap antes de `pipeline.executar_pipeline()`.
+app/main.py → CLI entry-point; argparse com subcomandos: `executar` (default) | `normalizar` | `validar-dist` | `validar-hr` | `validar-consist`. Executa bootstrap antes de `pipeline.executar_pipeline()`.
 app/cli/normalizar.py → normaliza distribuição contratual; produz `data/saida/distribuicao_contratual_normalizada.xlsx`.
 app/cli/validar_dist.py → registra BD/Medição no SQLite e gera relatório de validação.
 app/cli/validar_hr.py → lê medicao_base.xlsx, chama validar_horas, grava relatório em data/saida/.
 app/cli/validar_consist.py → compara planilha original × processada (auditor autônomo).
-ui/gui.py → desktop GUI (tkinter); PyInstaller `AutomacaoMedicao.spec`. Executa bootstrap antes de chamar `pipeline.executar_pipeline()`.
+app/cli/validar_consist_comparar.py → comparador planilha original × processada (helper de validar_consist).
+app/cli/validar_consist_relatorio.py → emite relatório de auditoria de consistência (helper de validar_consist).
+ui/gui.py → desktop GUI (tkinter); PyInstaller `AutomacaoMedicao.spec`. Inicializa logging e delega tarefas a `gui_handlers`.
+ui/gui_handlers.py → handlers da GUI; executa bootstrap de SQLite antes de chamar `pipeline.executar_pipeline()`; marshalling para a main thread.
 assets/distribuicao_contratual_normalizada.xlsx → source-of-truth versionado (repo privado); empacotada no bundle via PyInstaller `datas=`; source do bootstrap inicial do SQLite.
 data/automacao.db → SQLite gravável em `<exe_dir>/data/` (frozen) ou raiz do projeto (dev); resolvido via `app.paths.db_path()`.
+logs/automacao.log → log rotativo de execução (1 MiB × 5 backups); diretório resolvido via `app.paths.logs_dir()`.

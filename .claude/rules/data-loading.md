@@ -17,3 +17,10 @@ paths:
 - Observation: apply core.deduplicar_observacao before concatenating — never
   concatenate directly.
 - Inconsistency report: export all records, no truncation.
+- mapear_colunas: colunas opcionais ausentes vão para `_ausentes` (tupla);
+  pipeline transforma faltantes-críticos em inconsistência quando
+  validar_distribuicao=True — não silenciar.
+- indexar_e_ler_dados: registrar `obs_divergentes` / `desc_divergentes` quando
+  múltiplas linhas (matricula, data) divergem; aplicar_updates emite
+  inconsistência apenas para tipo='treinamento' (semântica append). Férias e
+  atestado sobrescrevem por contrato — não emitir divergência.
