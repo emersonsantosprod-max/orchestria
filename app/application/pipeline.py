@@ -74,6 +74,33 @@ def _mes_referencia(medicao_por_matricula: dict):
     return min(todas).replace(day=1)
 
 
+def derivar_mes_referencia_da_medicao(caminho_medicao: str):
+    """Lê a Medição e retorna o mês de referência (date, primeiro dia do mês).
+
+    Boundary pública para consumo externo (HTTP `POST /api/session/medicao`,
+    GUI, qualquer entry-point que precise validar a Medição antes do pipeline).
+    Usa o mesmo `_mes_referencia` interno para garantir SSOT — qualquer outra
+    derivação (header cell, filename) divergiria do valor que `executar_pipeline`
+    aceita e geraria PlanilhaInvalidaError no momento errado.
+    """
+    try:
+        wb_ro, sheet_ro = writer.carregar_planilha(
+            caminho_medicao, read_only=True, data_only=True
+        )
+        try:
+            col_map = writer.mapear_colunas(sheet_ro)
+            (_index, _obs, _desc, _md, _sg,
+             medicao_por_matricula, _records,
+             _obs_div, _desc_div) = writer.indexar_e_ler_dados(sheet_ro, col_map)
+        finally:
+            wb_ro.close()
+    except FileNotFoundError as e:
+        raise ArquivoNaoEncontradoError(str(e)) from e
+    except PermissionError as e:
+        raise ArquivoAbertoError(str(e)) from e
+    return _mes_referencia(medicao_por_matricula)
+
+
 def executar_pipeline(
     caminho_medicao: str,
     caminho_treinamentos: str = '',
