@@ -1,5 +1,7 @@
+import logging
 import os
 import sys
+import threading
 import tkinter as tk
 import tkinter.font as tkfont
 from pathlib import Path
@@ -18,6 +20,7 @@ app_path = os.path.join(base_path, "app")
 if app_path not in sys.path:
     sys.path.append(app_path)
 
+from app import db
 from app.logging_config import setup_logging
 from ui.gui_handlers import (
     GuiContext,
@@ -29,6 +32,18 @@ from ui.gui_handlers import (
 )
 
 setup_logging()
+
+_logger = logging.getLogger(__name__)
+_logger.info("bootstrap SQLite na main thread (popular_bd_se_vazio + popular_treinamentos_se_vazio)")
+_bootstrap_conn = db.conectar()
+try:
+    db.popular_bd_se_vazio(_bootstrap_conn)
+    db.popular_treinamentos_se_vazio(_bootstrap_conn)
+finally:
+    _bootstrap_conn.close()
+_logger.info("bootstrap SQLite concluído; conexão fechada")
+
+_db_write_lock = threading.Lock()
 
 _CHUMBO      = "#232323"
 _CHUMBO_2    = "#111111"
@@ -176,6 +191,7 @@ _ctx = GuiContext(
     desabilitar_botoes=_desabilitar_botoes,
     habilitar_botoes=_habilitar_botoes,
     marshal_to_main=lambda fn: janela.after(0, fn),
+    db_write_lock=_db_write_lock,
 )
 
 frame_lancar = ctk.CTkFrame(painel_botoes, fg_color=_PAINEL, corner_radius=0)

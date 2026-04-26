@@ -39,6 +39,7 @@ class GuiContext:
     desabilitar_botoes: Callable[[], None]
     habilitar_botoes: Callable[[], None]
     marshal_to_main: Callable[[Callable[[], None]], None]
+    db_write_lock: threading.Lock
 
 
 def mensagem_erro(exc: BaseException) -> str:
@@ -84,12 +85,8 @@ def _executar_fluxo(ctx: GuiContext, titulo_log: str, prompts, montar_kwargs):
     def tarefa():
         conn = None
         try:
-            logger.info('fluxo "%s": abrindo conexão SQLite', titulo_log)
+            logger.info('fluxo "%s": abrindo conexão SQLite (worker thread, read-only)', titulo_log)
             conn = db.conectar()
-            logger.info('fluxo "%s": popular_bd_se_vazio', titulo_log)
-            db.popular_bd_se_vazio(conn)
-            logger.info('fluxo "%s": popular_treinamentos_se_vazio', titulo_log)
-            db.popular_treinamentos_se_vazio(conn)
             ctx.imprimir_log("Fase 1/3: Lendo arquivos (modo otimizado)...\n")
             logger.info('fluxo "%s": executar_pipeline', titulo_log)
             resultado = executar_pipeline(
@@ -169,7 +166,6 @@ def iniciar_validacao(ctx: GuiContext):
     conn = None
     try:
         conn = db.conectar()
-        db.popular_bd_se_vazio(conn)
         registros = db.obter_registro_arquivos(conn)
     except Exception as e:
         logger.exception('Erro no preâmbulo de validação')
@@ -210,14 +206,15 @@ def iniciar_validacao(ctx: GuiContext):
             conn = db.conectar()
             avisos_import = []
 
-            if caminho_bd:
-                ctx.imprimir_log("Registrando BD...\n")
-                db.registrar_bd(caminho_bd, conn)
-
-            if caminho_medicao:
-                ctx.imprimir_log("Registrando Medição...\n")
-                avisos = db.registrar_medicao(caminho_medicao, conn)
-                avisos_import.extend(avisos)
+            if caminho_bd or caminho_medicao:
+                with ctx.db_write_lock:
+                    if caminho_bd:
+                        ctx.imprimir_log("Registrando BD...\n")
+                        db.registrar_bd(caminho_bd, conn)
+                    if caminho_medicao:
+                        ctx.imprimir_log("Registrando Medição...\n")
+                        avisos = db.registrar_medicao(caminho_medicao, conn)
+                        avisos_import.extend(avisos)
 
             registros_atuais = db.obter_registro_arquivos(conn)
             bd_records       = db.obter_bd(conn)
