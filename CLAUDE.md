@@ -24,7 +24,7 @@ Stack: Python, openpyxl, SQLite, PyInstaller. Entry points: `python -m app.main`
 - `gerar_updates_ferias(dados, base_cobranca, medicao_por_matricula, md_cobranca_por_chave, sg_funcao_por_chave, mes_referencia, col_map)` → `(list[Update], list[Inconsistencia])` — não alterar assinatura.
 - `gerar_updates_atestado(dados)` → `(list[Update], list[Inconsistencia])` — assinatura única; pipeline chama por nome (não `processar_atestados`).
 - `pipeline.executar_pipeline(..., conn=None, validar_distribuicao=False)`: DI explícita. `validar_distribuicao=True` exige `conn`; caso contrário levanta `ValueError`.
-- `validar_distribuicao.validar_para_dominio(...)` é a única boundary do pipeline; CLI (`app/cli/validar_dist.py`) e GUI (`ui/gui_handlers.py`) usam `validar_aderencia_distribuicao` para relatórios — intencional, não consolidar.
+- `app.application.services.validacao_distribuicao.validar_para_dominio(bd_records, medicao_snapshot) -> list[core.Inconsistencia]` é a única boundary do pipeline; CLI (`app/cli/validar_dist.py`) e GUI (`ui/gui_handlers.py`) usam `app.domain.distribuicao.validar_aderencia_distribuicao` para relatórios — intencional, não consolidar. Formato da mensagem de erro `"<tipo> [<md>] esperado=<f.4> realizado=<f.4> diff=<f.4>"` é contrato congelado (regex coberto em `tests/test_distribuicao_contract_guard.py`).
 - Caminho do SQLite é resolvido via `app.paths.db_path()` — não referenciar `Path('data/automacao.db')` diretamente.
 
 ## CRITICAL
@@ -94,4 +94,4 @@ Flow: entrada/ → loaders → application/pipeline → [ferias|treinamento|ates
 - `tests/test_layer_boundaries.py` (Step 6) é o enforcement: módulos já em `app/domain/` não podem importar `sqlite3` / `openpyxl`; módulos em `app/application/` não podem importar `app.infrastructure.*`.
 - Atestado já migrado para `app/domain/atestado.py`; legacy `app/atestado.py` removido.
 - Férias já migrado para `app/domain/ferias.py`; legacy `app/ferias.py` removido.
-- Migração de distribuição é **fora do escopo** desta janela. Permanece em `app/*.py` até justificativa concreta.
+- Validador de distribuição já migrado: `app/domain/distribuicao.py` (`validar_aderencia_distribuicao`, `gerar_relatorio`, `InconsistenciaDistribuicao`), `app/application/services/validacao_distribuicao.py` (`validar_para_dominio`), `app/infrastructure/adapters/relatorio_distribuicao.py` (`salvar_relatorio`); legacy `app/validar_distribuicao.py` removido. `app/distribuicao_contratual.py` permanece flat (fora de escopo).

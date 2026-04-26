@@ -13,7 +13,7 @@ Imports permitidos: stdlib, `app.domain.*`. Proibidos: `sqlite3`, `openpyxl`, `a
 - `app/domain/ferias.py` — `gerar_updates_ferias`.
 - `app/domain/atestado.py` (target) ← `app/atestado.py` (removido) — `gerar_updates_atestado`.
 - `app/distribuicao_contratual.py` — normalização de distribuição contratual (não migrado nesta janela).
-- `app/validar_distribuicao.py` — validação BD vs Medição + `validar_para_dominio` (boundary do pipeline).
+- `app/domain/distribuicao.py` — `validar_aderencia_distribuicao`, `gerar_relatorio`, `InconsistenciaDistribuicao`.
 - `app/validar_horas.py` — validação de Hr Trabalhadas (col 19); limites 0 ≤ valor ≤ `LIMITE_HH` (9h10min); sem DB.
 
 ### `app/application/` — orquestração + ports
@@ -22,6 +22,7 @@ Imports permitidos: stdlib, `app.domain.*`, `typing.Protocol`. Proibidos: `app.i
 - `app/application/pipeline.py` (target) ← `app/pipeline.py` (legacy) — `executar_pipeline`. Recebe `conn` via DI; não abre conexão; não executa bootstrap.
 - `app/application/ports.py` (target, vazio até Step 3) — Protocols por negócio (ex.: `TabelaClassificacao`).
 - `app/application/services/lancar_treinamentos.py` (target, criado em Step 3) — `LancarTreinamentosService`.
+- `app/application/services/validacao_distribuicao.py` — `validar_para_dominio` (boundary do pipeline para validação BD vs Medição).
 
 ### `app/infrastructure/` — adapters de I/O
 Única camada que toca `sqlite3` / `openpyxl` / filesystem. Sem regra de import — pode importar tudo.
@@ -32,6 +33,7 @@ Imports permitidos: stdlib, `app.domain.*`, `typing.Protocol`. Proibidos: `app.i
 - `app/infrastructure/paths.py` (target) ← `app/paths.py` (legacy) — `db_path()`, `saida_dir()`, `logs_dir()`, xlsx empacotado. Resolução determinística dev × frozen.
 - `app/infrastructure/logging_config.py` (target) ← `app/logging_config.py` (legacy) — `setup_logging()` idempotente; rotating handler em `logs/automacao.log`.
 - `app/infrastructure/adapters/sqlite_tabela_classificacao.py` (target, criado em Step 3) — adapter de `TabelaClassificacao`.
+- `app/infrastructure/adapters/relatorio_distribuicao.py` — `salvar_relatorio` (escreve relatório txt em `saida_dir()`).
 
 ### `app/main.py` + `app/cli/` — composition root (CLI)
 Único entry-point: `python -m app.main`. Constrói adapters, executa bootstrap, injeta no service / pipeline.

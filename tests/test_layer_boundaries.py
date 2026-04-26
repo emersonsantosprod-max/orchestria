@@ -12,9 +12,6 @@ introduzir um port para cada dependência (ferias, atestado, excel, db),
 o que viola o cap "um port por refactor" e adiciona indireção sem
 ganho de testabilidade. Pipeline fica fora deste teste enquanto não
 houver justificativa para mais ports.
-
-Módulos legacy ainda flat em app/*.py (distribuicao, validar_*) ficam
-fora de escopo desta janela de migração — ver PROJECT_STRUCTURE.md.
 """
 
 from __future__ import annotations
