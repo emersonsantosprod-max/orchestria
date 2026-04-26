@@ -16,7 +16,7 @@ import unicodedata
 import openpyxl
 import pandas as pd
 
-from app.errors import PlanilhaInvalidaError
+from app.domain.errors import PlanilhaInvalidaError
 
 logger = logging.getLogger(__name__)
 

@@ -28,8 +28,8 @@ from app import atestado, db, ferias, loaders
 from app import excel as writer
 from app import validar_distribuicao as vdist
 from app.application.services.lancar_treinamentos import LancarTreinamentosService
-from app.core import inconsistencia
-from app.errors import (
+from app.domain.core import inconsistencia
+from app.domain.errors import (
     ArquivoAbertoError,
     ArquivoNaoEncontradoError,
     AutomacaoError,

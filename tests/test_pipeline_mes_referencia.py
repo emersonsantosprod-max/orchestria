@@ -2,7 +2,7 @@ from datetime import date
 
 import pytest
 
-from app.errors import PlanilhaInvalidaError
+from app.domain.errors import PlanilhaInvalidaError
 from app.pipeline import _mes_referencia
 
 

@@ -4,7 +4,7 @@ from datetime import date
 
 from app import excel as writer
 from app import ferias
-from app.core import Update
+from app.domain.core import Update
 
 
 def _col_map_minimo():

@@ -23,7 +23,7 @@ import logging
 import re
 from collections import defaultdict
 
-from app.core import (
+from app.domain.core import (
     LIMITE_HORAS_TRABALHADAS,
     Update,
     deduplicar_observacao,

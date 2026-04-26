@@ -13,23 +13,23 @@ from xml.etree import ElementTree as ET
 
 import openpyxl
 
-from app.core import (
+from app.domain.core import (
     converter_desconto_para_minutos as _core_converter_desconto_para_minutos,
 )
-from app.core import (
+from app.domain.core import (
     converter_minutos_para_hhmmss as _core_converter_minutos_para_hhmmss,
 )
-from app.core import (
+from app.domain.core import (
     deduplicar_observacao,
     inconsistencia,
 )
-from app.core import (
+from app.domain.core import (
     normalizar_data as _core_normalizar_data,
 )
-from app.core import (
+from app.domain.core import (
     normalizar_matricula as _core_normalizar_matricula,
 )
-from app.core import (
+from app.domain.core import (
     parse_data_obj as _core_parse_data_obj,
 )
 

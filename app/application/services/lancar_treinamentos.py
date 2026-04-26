@@ -8,8 +8,8 @@ openpyxl — depende apenas de Mapping retornado pelo port.
 from collections.abc import Mapping
 
 from app.application.ports import TabelaClassificacao
-from app.core import Inconsistencia, Update
-from app.treinamento import gerar_updates_treinamento
+from app.domain.core import Inconsistencia, Update
+from app.domain.treinamento import gerar_updates_treinamento
 
 
 class LancarTreinamentosService:

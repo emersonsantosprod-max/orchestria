@@ -29,7 +29,7 @@ Erros detectados:
 import re
 from datetime import date, timedelta
 
-from app.core import Update, inconsistencia, normalizar_matricula
+from app.domain.core import Update, inconsistencia, normalizar_matricula
 
 _RE_PERIODO = re.compile(
     r'(\d{2})/(\d{2})/(\d{4})\s*a\s*(\d{2})/(\d{2})/(\d{4})$'

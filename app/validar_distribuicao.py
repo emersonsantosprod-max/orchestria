@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-from app import core
+from app.domain import core
 from app.paths import saida_dir
 
 ERRO_LINHA_AUSENTE       = 'ERRO_LINHA_AUSENTE'

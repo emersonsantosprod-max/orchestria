@@ -15,7 +15,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-from app.core import LIMITE_HORAS_TRABALHADAS
+from app.domain.core import LIMITE_HORAS_TRABALHADAS
 from app.paths import saida_dir
 
 LIMITE_HH = LIMITE_HORAS_TRABALHADAS

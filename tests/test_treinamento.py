@@ -1,6 +1,6 @@
 import pytest
 
-from app import treinamento
+from app.domain import treinamento
 
 
 def test_classificar_treinamento():

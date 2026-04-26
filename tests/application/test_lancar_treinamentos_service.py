@@ -3,7 +3,7 @@
 from collections.abc import Mapping
 
 from app.application.services.lancar_treinamentos import LancarTreinamentosService
-from app.treinamento import gerar_updates_treinamento
+from app.domain.treinamento import gerar_updates_treinamento
 
 
 class _FakeTabela:

@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from datetime import timedelta
 
-from app.core import Update, normalizar_matricula, parse_data_obj
+from app.domain.core import Update, normalizar_matricula, parse_data_obj
 
 
 def gerar_updates_atestado(dados: list) -> tuple:

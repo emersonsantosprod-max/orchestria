@@ -9,7 +9,7 @@ from pathlib import Path
 from tkinter import filedialog
 
 from app import db
-from app.errors import (
+from app.domain.errors import (
     ArquivoAbertoError,
     ArquivoNaoEncontradoError,
     AutomacaoError,
