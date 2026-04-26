@@ -93,4 +93,5 @@ Flow: entrada/ → loaders → application/pipeline → [ferias|treinamento|ates
 - Novos imports devem usar o caminho-alvo (`app.domain.treinamento`, etc.) quando o arquivo já estiver migrado; senão, o caminho atual.
 - `tests/test_layer_boundaries.py` (Step 6) é o enforcement: módulos já em `app/domain/` não podem importar `sqlite3` / `openpyxl`; módulos em `app/application/` não podem importar `app.infrastructure.*`.
 - Atestado já migrado para `app/domain/atestado.py`; legacy `app/atestado.py` removido.
-- Migração de férias / distribuição é **fora do escopo** desta janela. Eles permanecem em `app/*.py` até justificativa concreta.
+- Férias já migrado para `app/domain/ferias.py`; legacy `app/ferias.py` removido.
+- Migração de distribuição é **fora do escopo** desta janela. Permanece em `app/*.py` até justificativa concreta.
