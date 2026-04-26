@@ -24,9 +24,10 @@ import os
 import sqlite3
 from dataclasses import dataclass, field
 
-from app import atestado, db, ferias, loaders, treinamento
+from app import atestado, db, ferias, loaders
 from app import excel as writer
 from app import validar_distribuicao as vdist
+from app.application.services.lancar_treinamentos import LancarTreinamentosService
 from app.core import inconsistencia
 from app.errors import (
     ArquivoAbertoError,
@@ -34,6 +35,7 @@ from app.errors import (
     AutomacaoError,
     PlanilhaInvalidaError,
 )
+from app.infrastructure.adapters.sqlite_tabela_classificacao import SqliteTabelaClassificacao
 
 logger = logging.getLogger(__name__)
 
@@ -106,18 +108,19 @@ def executar_pipeline(
         caminho_saida = os.path.join(medicao_dir, 'medicao_processada.xlsx')
 
     dados = []
-    tabela = {}
     dados_ferias = []
     base_cobranca = {}
     dados_atestado = []
 
+    servico_treinamentos: LancarTreinamentosService | None = None
     if treinamento_ativo:
-        tabela = db.obter_tabela_treinamento(conn)
-        if not tabela:
+        tabela_classif = SqliteTabelaClassificacao(conn)
+        if not tabela_classif.obter():
             raise ValueError(
                 "bd_treinamentos está vazio. Verifique se assets/base_treinamentos.xlsx "
                 "está empacotado e se o bootstrap foi chamado na application boundary."
             )
+        servico_treinamentos = LancarTreinamentosService(tabela_classif)
 
     logger.info('executar_pipeline: fase 1 (leitura) iniciando')
     try:
@@ -158,8 +161,9 @@ def executar_pipeline(
     inconst_trein = []
     if treinamento_ativo:
         logger.info('executar_pipeline: domínio treinamento')
-        updates_treinamento, inconst_trein = treinamento.gerar_updates_treinamento(
-            dados, tabela, obs_existentes
+        assert servico_treinamentos is not None
+        updates_treinamento, inconst_trein = servico_treinamentos.executar(
+            dados, obs_existentes
         )
 
     updates_ferias = []

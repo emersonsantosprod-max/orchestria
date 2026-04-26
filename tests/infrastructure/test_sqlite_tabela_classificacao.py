@@ -1,0 +1,37 @@
+"""SqliteTabelaClassificacao: adapter wraps db.obter_tabela_treinamento."""
+
+import sqlite3
+
+from app.infrastructure.adapters.sqlite_tabela_classificacao import SqliteTabelaClassificacao
+
+
+def _seed_conn() -> sqlite3.Connection:
+    conn = sqlite3.connect(":memory:")
+    conn.row_factory = sqlite3.Row
+    conn.execute("CREATE TABLE bd_treinamentos (nome TEXT, tipo TEXT)")
+    conn.executemany(
+        "INSERT INTO bd_treinamentos(nome, tipo) VALUES (?, ?)",
+        [('NR-10 BÁSICO', 'NR-10'), ('NR-35', 'NR-35')],
+    )
+    conn.commit()
+    return conn
+
+
+def test_adapter_devolve_mapping_da_tabela():
+    conn = _seed_conn()
+    try:
+        tabela = SqliteTabelaClassificacao(conn).obter()
+        assert tabela == {'NR-10 BÁSICO': 'NR-10', 'NR-35': 'NR-35'}
+    finally:
+        conn.close()
+
+
+def test_adapter_devolve_dict_vazio_quando_tabela_vazia():
+    conn = sqlite3.connect(":memory:")
+    conn.row_factory = sqlite3.Row
+    conn.execute("CREATE TABLE bd_treinamentos (nome TEXT, tipo TEXT)")
+    conn.commit()
+    try:
+        assert SqliteTabelaClassificacao(conn).obter() == {}
+    finally:
+        conn.close()
