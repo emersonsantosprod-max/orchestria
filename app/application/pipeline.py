@@ -24,10 +24,9 @@ import os
 import sqlite3
 from dataclasses import dataclass, field
 
-from app import ferias
 from app import validar_distribuicao as vdist
 from app.application.services.lancar_treinamentos import LancarTreinamentosService
-from app.domain import atestado
+from app.domain import atestado, ferias
 from app.domain.core import inconsistencia
 from app.domain.errors import (
     ArquivoAbertoError,
