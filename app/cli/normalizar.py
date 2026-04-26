@@ -12,7 +12,7 @@ import sys
 from collections import Counter, defaultdict
 from datetime import datetime
 
-from app.distribuicao_contratual import (
+from app.domain.distribuicao_contratual import (
     AVISO_COLUNA_DESCONHECIDA,
     AVISO_COLUNA_DUPLICADA,
     AVISO_DECIMAL,
@@ -22,9 +22,15 @@ from app.distribuicao_contratual import (
     AVISO_VALOR_NAO_NUMERICO,
     ERRO_SIGLA,
     ERRO_TOTAL,
-    carregar_e_normalizar,
-    exportar_normalizado,
+    localizar_colunas_chave,
+    normalizar_linhas,
+    parse_distribuicao_cols,
     validar_distribuicao_cobranca,
+)
+from app.infrastructure.adapters.excel_distribuicao_contratual import (
+    DistribuicaoContratualMalformadaError,
+    escrever_xlsx_normalizado,
+    ler_xlsx_contratual,
 )
 from app.infrastructure.paths import _project_root  # type: ignore
 
@@ -128,13 +134,20 @@ def main() -> int:
         return 1
     os.makedirs(os.path.dirname(ARQUIVO_SAIDA), exist_ok=True)
     try:
-        normalized, raw_sums, atual, early_warnings = carregar_e_normalizar(ARQUIVO_ENTRADA)
-    except ValueError as e:
+        headers, data_rows, w_hdr = ler_xlsx_contratual(ARQUIVO_ENTRADA)
+        col_map, w_cols = parse_distribuicao_cols(headers)
+        sigla_col, funcao_col, atual_col = localizar_colunas_chave(headers)
+        normalized, raw_sums, atual, w_norm = normalizar_linhas(
+            data_rows, col_map, sigla_col, funcao_col, atual_col)
+        w_val = validar_distribuicao_cobranca(normalized, raw_sums, atual)
+        escrever_xlsx_normalizado(normalized, ARQUIVO_SAIDA)
+    except DistribuicaoContratualMalformadaError as e:
+        print(f"[ERRO ESTRUTURAL] {e}")
+        return 1
+    except (ValueError, OSError) as e:
         print(f"[ERRO CRÍTICO] {e}")
         return 1
-    validation_warnings = validar_distribuicao_cobranca(normalized, raw_sums, atual)
-    all_inc = early_warnings + validation_warnings
-    exportar_normalizado(normalized, ARQUIVO_SAIDA)
+    all_inc = w_hdr + w_cols + w_norm + w_val
     imprimir_relatorio(all_inc, ARQUIVO_ENTRADA, ARQUIVO_SAIDA, len(normalized))
     return 1 if any(i['tipo'] in TIPOS_ERRO for i in all_inc) else 0
 
