@@ -11,7 +11,7 @@ from __future__ import annotations
 import logging
 from logging.handlers import RotatingFileHandler
 
-from app.paths import logs_dir
+from app.infrastructure.paths import logs_dir
 
 _FORMAT = '%(asctime)s %(levelname)s %(name)s:%(lineno)d %(message)s'
 _HANDLER_TAG = '_automacao_file_handler'

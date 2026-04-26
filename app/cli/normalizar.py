@@ -26,7 +26,7 @@ from app.distribuicao_contratual import (
     exportar_normalizado,
     validar_distribuicao_cobranca,
 )
-from app.paths import _project_root  # type: ignore
+from app.infrastructure.paths import _project_root  # type: ignore
 
 _BASE_DIR = str(_project_root())
 

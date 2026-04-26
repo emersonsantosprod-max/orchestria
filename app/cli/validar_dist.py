@@ -7,7 +7,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from app.db import (
+from app.infrastructure.db import (
     conectar,
     obter_bd,
     obter_medicao,
@@ -16,7 +16,7 @@ from app.db import (
     registrar_bd,
     registrar_medicao,
 )
-from app.paths import db_path
+from app.infrastructure.paths import db_path
 from app.validar_distribuicao import _salvar_relatorio, gerar_relatorio, validar_aderencia_distribuicao
 
 
@@ -29,7 +29,6 @@ def cmd_registrar_bd(path_str: str, conn) -> int:
     registrar_bd(path, conn)
     print('BD registrado com sucesso.')
     return 0
-
 
 def cmd_registrar_medicao(path_str: str, conn) -> int:
     path = Path(path_str)
@@ -91,7 +90,6 @@ def main(argv=None) -> int:
         return cmd_validar(conn)
     finally:
         conn.close()
-
 
 if __name__ == '__main__':
     sys.exit(main())

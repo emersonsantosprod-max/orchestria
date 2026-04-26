@@ -3,7 +3,7 @@ import tempfile
 import openpyxl
 import pytest
 
-from app.db import (
+from app.infrastructure.db import (
     _normalizar_pct,
     conectar,
     obter_bd,

@@ -1,6 +1,6 @@
 import logging
 
-from app import logging_config
+from app.infrastructure import logging_config
 
 
 def test_setup_logging_idempotente(monkeypatch, tmp_path):

@@ -24,8 +24,7 @@ import os
 import sqlite3
 from dataclasses import dataclass, field
 
-from app import atestado, db, ferias, loaders
-from app import excel as writer
+from app import atestado, ferias
 from app import validar_distribuicao as vdist
 from app.application.services.lancar_treinamentos import LancarTreinamentosService
 from app.domain.core import inconsistencia
@@ -35,6 +34,8 @@ from app.domain.errors import (
     AutomacaoError,
     PlanilhaInvalidaError,
 )
+from app.infrastructure import db, loaders
+from app.infrastructure import excel as writer
 from app.infrastructure.adapters.sqlite_tabela_classificacao import SqliteTabelaClassificacao
 
 logger = logging.getLogger(__name__)

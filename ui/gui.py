@@ -20,8 +20,8 @@ app_path = os.path.join(base_path, "app")
 if app_path not in sys.path:
     sys.path.append(app_path)
 
-from app import db
-from app.logging_config import setup_logging
+from app.infrastructure import db
+from app.infrastructure.logging_config import setup_logging
 from ui.gui_handlers import (
     GuiContext,
     iniciar_atestado,

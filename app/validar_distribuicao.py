@@ -17,7 +17,7 @@ from datetime import datetime
 from pathlib import Path
 
 from app.domain import core
-from app.paths import saida_dir
+from app.infrastructure.paths import saida_dir
 
 ERRO_LINHA_AUSENTE       = 'ERRO_LINHA_AUSENTE'
 ERRO_INSUFICIENCIA_RATEIO = 'ERRO_INSUFICIENCIA_RATEIO'

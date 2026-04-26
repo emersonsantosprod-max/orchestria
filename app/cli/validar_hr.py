@@ -7,7 +7,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from app.loaders import carregar_medicao_hr
+from app.infrastructure.loaders import carregar_medicao_hr
 from app.validar_horas import _salvar_relatorio, gerar_relatorio, validar_horas_trabalhadas
 
 DEFAULT_MEDICAO = 'data/entrada/medicao_base.xlsx'

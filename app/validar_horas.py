@@ -16,7 +16,7 @@ from datetime import datetime
 from pathlib import Path
 
 from app.domain.core import LIMITE_HORAS_TRABALHADAS
-from app.paths import saida_dir
+from app.infrastructure.paths import saida_dir
 
 LIMITE_HH = LIMITE_HORAS_TRABALHADAS
 

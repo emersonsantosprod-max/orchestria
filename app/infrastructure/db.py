@@ -28,7 +28,7 @@ from pathlib import Path
 import openpyxl
 
 from app.domain.core import normalizar_data
-from app.paths import bundled_distribuicao_xlsx, bundled_treinamentos_xlsx, db_path
+from app.infrastructure.paths import bundled_distribuicao_xlsx, bundled_treinamentos_xlsx, db_path
 
 logger = logging.getLogger(__name__)
 

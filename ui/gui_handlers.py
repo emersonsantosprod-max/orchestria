@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from tkinter import filedialog
 
-from app import db
+from app.application.pipeline import executar_pipeline, salvar_relatorio_inconsistencias
 from app.domain.errors import (
     ArquivoAbertoError,
     ArquivoNaoEncontradoError,
@@ -16,8 +16,8 @@ from app.domain.errors import (
     ConversaoArquivoError,
     PlanilhaInvalidaError,
 )
-from app.loaders import carregar_medicao_hr
-from app.pipeline import executar_pipeline, salvar_relatorio_inconsistencias
+from app.infrastructure import db
+from app.infrastructure.loaders import carregar_medicao_hr
 from app.validar_distribuicao import _salvar_relatorio, gerar_relatorio, validar_aderencia_distribuicao
 from app.validar_horas import (
     _salvar_relatorio as _salvar_relatorio_hr,

@@ -6,7 +6,7 @@ import sys
 
 from app.cli.validar_consist_comparar import comparar_arquivos
 from app.cli.validar_consist_relatorio import SEP_SECAO, imprimir_relatorio
-from app.paths import _project_root
+from app.infrastructure.paths import _project_root
 
 _BASE_DIR = str(_project_root())
 

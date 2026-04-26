@@ -1,7 +1,7 @@
 import openpyxl
 import pytest
 
-from app import db
+from app.infrastructure import db
 
 
 def _make_base_treinamentos_xlsx(tmp_path, rows):

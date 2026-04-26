@@ -3,7 +3,8 @@ from unittest.mock import patch
 
 import openpyxl
 
-from app import db, main
+from app import main
+from app.infrastructure import db
 
 
 def test_fluxo_completo(tmp_path):
@@ -29,7 +30,7 @@ def test_fluxo_completo(tmp_path):
     with patch(
         'app.main.definir_caminhos',
         return_value=(medicao, trein, saida, '', ''),
-    ), patch('app.db.conectar', return_value=db.conectar(db_file)):
+    ), patch('app.infrastructure.db.conectar', return_value=db.conectar(db_file)):
         res = main.executar_medicao()
 
     # Devemos ter 3 registros processados com as fixtures ("TR-SIMPLES", "TR-REMUNERADO", "TR-MULTIDIA")

@@ -7,7 +7,7 @@ Wraps app.db.obter_tabela_treinamento(conn). Construído pela composition root
 import sqlite3
 from collections.abc import Mapping
 
-from app import db
+from app.infrastructure import db
 
 
 class SqliteTabelaClassificacao:

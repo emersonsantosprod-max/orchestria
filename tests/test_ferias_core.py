@@ -4,8 +4,8 @@ from datetime import date
 
 import pytest
 
-from app import excel as writer
 from app import ferias
+from app.infrastructure import excel as writer
 
 
 @pytest.mark.parametrize("entrada,esperado", [

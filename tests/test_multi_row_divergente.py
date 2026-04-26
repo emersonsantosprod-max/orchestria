@@ -8,8 +8,8 @@ Update de tipo='treinamento' (row=None) toca essa chave.
 
 import openpyxl
 
-from app import excel as writer
 from app.domain.core import Update
+from app.infrastructure import excel as writer
 
 
 def _criar_medicao_divergente(caminho: str) -> None:

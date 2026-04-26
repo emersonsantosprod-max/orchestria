@@ -4,8 +4,8 @@ import zipfile
 import openpyxl
 import pytest
 
-from app import excel as writer
 from app.domain.core import Update
+from app.infrastructure import excel as writer
 
 
 def criar_planilha_mock(caminho):

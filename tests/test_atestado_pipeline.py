@@ -3,7 +3,8 @@ from datetime import date
 
 import openpyxl
 
-from app import db, pipeline
+from app.application import pipeline
+from app.infrastructure import db
 
 
 def _criar_atestado_xlsx(caminho: str) -> None:

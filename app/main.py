@@ -12,9 +12,9 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app import db
-from app import pipeline as service
-from app.logging_config import setup_logging
+from app.application import pipeline as service
+from app.infrastructure import db
+from app.infrastructure.logging_config import setup_logging
 
 logger = logging.getLogger(__name__)
 

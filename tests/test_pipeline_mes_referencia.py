@@ -2,8 +2,8 @@ from datetime import date
 
 import pytest
 
+from app.application.pipeline import _mes_referencia
 from app.domain.errors import PlanilhaInvalidaError
-from app.pipeline import _mes_referencia
 
 
 def test_mes_referencia_unico_mes_retorna_dia_1():
