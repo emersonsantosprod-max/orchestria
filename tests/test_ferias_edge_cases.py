@@ -4,7 +4,7 @@ from datetime import date
 
 import pytest
 
-from app import ferias
+from app.domain import ferias
 
 
 def _col_map_minimo():
