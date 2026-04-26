@@ -69,6 +69,31 @@ def test_app_application_services_nao_importa_app_infrastructure():
     )
 
 
+def test_legacy_distribuicao_contratual_removido():
+    """Garante que `app/distribuicao_contratual.py` não ressurja após Step 6.
+
+    O domínio vive em `app/domain/distribuicao_contratual.py` e o I/O em
+    `app/infrastructure/adapters/excel_distribuicao_contratual.py`.
+    """
+    legacy = ROOT / "app" / "distribuicao_contratual.py"
+    assert not legacy.exists(), (
+        "app/distribuicao_contratual.py foi reintroduzido — use "
+        "app.domain.distribuicao_contratual + adapter Excel"
+    )
+
+
+def test_domain_distribuicao_contratual_nao_importa_openpyxl():
+    """Pin explícito do contrato de pureza para o módulo migrado."""
+    arquivo = DOMAIN_DIR / "distribuicao_contratual.py"
+    assert arquivo.exists()
+    proibidos = ("openpyxl", "sqlite3", "app.infrastructure", "app.application")
+    erros = _violacoes(arquivo, proibidos)
+    assert not erros, (
+        "app/domain/distribuicao_contratual.py viola pureza:\n"
+        + "\n".join(f"  importa {n}" for _, n in erros)
+    )
+
+
 def test_main_nao_importa_app_domain():
     """CLI wrapper (main.py) não pode conhecer módulos de domínio.
 
