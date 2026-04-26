@@ -38,6 +38,30 @@ Stack: Python, openpyxl, SQLite, PyInstaller. Entry points: `python -m app.main`
 - Não alterar prefixo `'TREIN. '` em observação de treinamento — `aplicar_updates` usa `'TREIN.' in obs_celula` como marca de idempotência; mudança quebra re-execução.
 - Divergência multi-linha (obs/desconto) em `aplicar_updates` é reportada apenas para `tipo='treinamento'` (semântica append); férias/atestado sobrescrevem por contrato — não estender sem rever overwrite.
 
+## SKILLS
+
+Skills em `.claude/skills/`. Claude Code injeta automaticamente as com `paths:` correspondente ao arquivo em edição. As demais devem ser invocadas intencionalmente conforme abaixo.
+
+### brainstorming
+**Quando:** ANTES de qualquer implementação não trivial — nova feature, mudança de comportamento, refatoração com impacto em múltiplos módulos.
+**Fluxo:** explorar contexto → perguntas (uma por vez) → 2–3 abordagens com trade-offs → design → spec em `docs/specs/YYYY-MM-DD-<topico>.md` → aprovação → implementar.
+**Gate:** não escrever código antes de aprovação explícita do design.
+
+### python-patterns
+**Quando:** ao escrever ou revisar código Python — aplicar Protocols, dataclasses, context managers, type hints, DI.
+**Auto-trigger:** `app/**/*.py`, `ui/**/*.py`, `tests/**/*.py`.
+**Restrições do projeto:** ver CONTRACTS e CRITICAL acima — patterns genéricos cedem às regras do projeto.
+
+### python-testing
+**Quando:** ao escrever testes novos, revisar cobertura, ou configurar infraestrutura de testes.
+**Auto-trigger:** `tests/**/*.py`.
+**Projeto:** fakes para ports; SQLite `:memory:` para infra; `test_layer_boundaries.py` é o enforcement de arquitetura — não quebrar.
+
+### react
+**Quando:** ao trabalhar em `ui/**/*.tsx` ou quando a migração de GUI para React iniciar.
+**Auto-trigger:** `ui/**/*.tsx`, `ui/**/*.ts`, `ui/**/*.jsx`.
+**Status:** stack a definir. Skill cobre padrões genéricos React/TypeScript. Atualizar com especificidades (componentes, roteamento, estado global) quando stack for escolhida.
+
 ## ARCHITECTURE
 
 Flow: entrada/ → loaders → application/pipeline → [ferias|treinamento|atestado|distribuicao] → aplicar_updates → saida/
@@ -68,4 +92,5 @@ Flow: entrada/ → loaders → application/pipeline → [ferias|treinamento|ates
 - Imports legados continuam válidos.
 - Novos imports devem usar o caminho-alvo (`app.domain.treinamento`, etc.) quando o arquivo já estiver migrado; senão, o caminho atual.
 - `tests/test_layer_boundaries.py` (Step 6) é o enforcement: módulos já em `app/domain/` não podem importar `sqlite3` / `openpyxl`; módulos em `app/application/` não podem importar `app.infrastructure.*`.
-- Migração de férias / atestado / distribuição é **fora do escopo** desta janela. Eles permanecem em `app/*.py` até justificativa concreta.
+- Atestado já migrado para `app/domain/atestado.py`; legacy `app/atestado.py` removido.
+- Migração de férias / distribuição é **fora do escopo** desta janela. Eles permanecem em `app/*.py` até justificativa concreta.

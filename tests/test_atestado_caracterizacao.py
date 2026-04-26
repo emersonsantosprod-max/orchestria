@@ -1,13 +1,14 @@
-"""Caracterização comportamental do legacy app.atestado.
+"""Caracterização comportamental de app.domain.atestado.
 
-Congela o comportamento atual como oráculo executável (comportamental,
-não estrutural). Cobre ramificações conhecidas + determinismo.
+Cobre ramificações conhecidas (vazio, um dia, intervalo, inicio>fim,
+data inválida, matrícula normalizada, virada de mês, duplicatas) +
+determinismo + estabilidade de ordem observada.
 
 Regras (CLAUDE.md):
-  - ordem da lista de saída NÃO é contrato — comparações futuras
-    (Step 3) normalizam antes de assert.
-  - este arquivo registra ordem observada apenas como detecção de
-    regressão interna no legacy, não como compromisso público.
+  - ordem da lista de saída NÃO é contrato — comparações normalizam
+    antes de assert.
+  - estabilidade de ordem é registrada como detecção de regressão
+    interna, não como compromisso público.
 """
 
 from __future__ import annotations
@@ -16,7 +17,7 @@ from datetime import datetime
 
 import pytest
 
-from app import atestado as legacy_atestado
+from app.domain import atestado
 
 
 def _normalizar_updates(updates):
@@ -124,7 +125,7 @@ def _normalizar_inconsistencias(incs):
     ],
 )
 def test_caracterizacao_legacy(dados, esperado_updates_norm, esperado_incs_norm):
-    updates, incs = legacy_atestado.gerar_updates_atestado(dados)
+    updates, incs = atestado.gerar_updates_atestado(dados)
 
     if esperado_updates_norm is not None:
         assert _normalizar_updates(updates) == esperado_updates_norm
@@ -135,7 +136,7 @@ def test_caracterizacao_legacy(dados, esperado_updates_norm, esperado_incs_norm)
 def test_matricula_normalizada_remove_whitespace_e_zeros():
     dados = [{'linha': 2, 'matricula': '  00111  ',
               'inicio': datetime(2026, 3, 18), 'fim': datetime(2026, 3, 18)}]
-    updates, _ = legacy_atestado.gerar_updates_atestado(dados)
+    updates, _ = atestado.gerar_updates_atestado(dados)
     assert len(updates) == 1
     assert updates[0].matricula == '111'
 
@@ -149,7 +150,7 @@ def test_determinismo_legacy_mesma_entrada_mesma_saida():
         {'linha': 4, 'matricula': '111', 'inicio': datetime(2026, 3, 20),
          'fim': datetime(2026, 3, 21)},
     ]
-    execucoes = [legacy_atestado.gerar_updates_atestado(dados) for _ in range(5)]
+    execucoes = [atestado.gerar_updates_atestado(dados) for _ in range(5)]
 
     referencia_norm = (
         _normalizar_updates(execucoes[0][0]),
@@ -172,7 +173,7 @@ def test_estabilidade_de_ordem_observada_legacy():
         {'linha': 3, 'matricula': '111', 'inicio': datetime(2026, 3, 18),
          'fim': datetime(2026, 3, 20)},
     ]
-    updates, _ = legacy_atestado.gerar_updates_atestado(dados)
+    updates, _ = atestado.gerar_updates_atestado(dados)
     ordem_observada = [(u.matricula, u.data) for u in updates]
     assert ordem_observada == [
         ('222', '19/03/2026'),

@@ -11,7 +11,7 @@ Imports permitidos: stdlib, `app.domain.*`. Proibidos: `sqlite3`, `openpyxl`, `a
 - `app/domain/errors.py` (target) ← `app/errors.py` (legacy) — `AutomacaoError`, `PlanilhaInvalidaError`.
 - `app/domain/treinamento.py` (target) ← `app/treinamento.py` (legacy) — `gerar_updates_treinamento`.
 - `app/ferias.py` — férias (não migrado nesta janela).
-- `app/atestado.py` — atestados (não migrado nesta janela).
+- `app/domain/atestado.py` (target) ← `app/atestado.py` (removido) — `gerar_updates_atestado`.
 - `app/distribuicao_contratual.py` — normalização de distribuição contratual (não migrado nesta janela).
 - `app/validar_distribuicao.py` — validação BD vs Medição + `validar_para_dominio` (boundary do pipeline).
 - `app/validar_horas.py` — validação de Hr Trabalhadas (col 19); limites 0 ≤ valor ≤ `LIMITE_HH` (9h10min); sem DB.
