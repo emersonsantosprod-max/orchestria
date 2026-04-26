@@ -16,8 +16,9 @@ from app.infrastructure.db import (
     registrar_bd,
     registrar_medicao,
 )
+from app.domain.distribuicao import gerar_relatorio, validar_aderencia_distribuicao
+from app.infrastructure.adapters.relatorio_distribuicao import salvar_relatorio
 from app.infrastructure.paths import db_path
-from app.validar_distribuicao import _salvar_relatorio, gerar_relatorio, validar_aderencia_distribuicao
 
 
 def cmd_registrar_bd(path_str: str, conn) -> int:
@@ -64,7 +65,7 @@ def cmd_validar(conn) -> int:
         inconsistencias, registros,
         n_pares_bd=len(bd_pares), n_datas=len(datas), avisos_import=[],
     )
-    caminho = _salvar_relatorio(conteudo)
+    caminho = salvar_relatorio(conteudo)
     print(f"Relatório gravado em: {caminho}")
     print(f"Total de inconsistências: {len(inconsistencias)}")
     return 1 if inconsistencias else 0

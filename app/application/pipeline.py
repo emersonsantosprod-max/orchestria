@@ -24,7 +24,7 @@ import os
 import sqlite3
 from dataclasses import dataclass, field
 
-from app import validar_distribuicao as vdist
+from app.application.services import validacao_distribuicao as vdist
 from app.application.services.lancar_treinamentos import LancarTreinamentosService
 from app.domain import atestado, ferias
 from app.domain.core import inconsistencia

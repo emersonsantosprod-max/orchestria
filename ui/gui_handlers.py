@@ -18,7 +18,8 @@ from app.domain.errors import (
 )
 from app.infrastructure import db
 from app.infrastructure.loaders import carregar_medicao_hr
-from app.validar_distribuicao import _salvar_relatorio, gerar_relatorio, validar_aderencia_distribuicao
+from app.domain.distribuicao import gerar_relatorio, validar_aderencia_distribuicao
+from app.infrastructure.adapters.relatorio_distribuicao import salvar_relatorio
 from app.validar_horas import (
     _salvar_relatorio as _salvar_relatorio_hr,
 )
@@ -231,7 +232,7 @@ def iniciar_validacao(ctx: GuiContext):
                 n_datas=len(datas),
                 avisos_import=avisos_import,
             )
-            caminho_rel = _salvar_relatorio(conteudo)
+            caminho_rel = salvar_relatorio(conteudo)
 
             ctx.imprimir_log(f"Relatório gerado em: {caminho_rel}\n")
             ctx.imprimir_log(f"Total de inconsistências: {len(inconsistencias)}\n")
