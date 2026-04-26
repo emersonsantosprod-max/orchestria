@@ -37,8 +37,9 @@ build = [
 [project.scripts]
 automacao = "app.main:main"
 
-[tool.setuptools]
-packages = ["app", "app.cli", "ui"]
+[tool.setuptools.packages.find]
+include = ["app*", "ui*"]
+exclude = ["tests*", "build*", "dist*", "venv*", "venv_win*", "baseline*", "scripts*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

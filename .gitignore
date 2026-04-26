@@ -17,6 +17,9 @@ dist/
 # Runtime data — entire directory excluded, no exceptions
 data/
 
+# Baseline outputs — regenerados sob demanda; ver scripts/diff_medicao.py
+baseline/
+
 # assets/ — bundled source-of-truth (distribuicao xlsx). Versionado.
 # Nada a ignorar aqui por padrão.
 

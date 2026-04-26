@@ -39,14 +39,33 @@ Stack: Python, openpyxl, SQLite, PyInstaller. Entry points: `python -m app.main`
 - Divergência multi-linha (obs/desconto) em `aplicar_updates` é reportada apenas para `tipo='treinamento'` (semântica append); férias/atestado sobrescrevem por contrato — não estender sem rever overwrite.
 
 ## ARCHITECTURE
-Flow: entrada/ → loaders.py → pipeline.py → [ferias|treinamento|atestado|distribuicao] → aplicar_updates → saida/
-Layers: loaders (I/O only) → domain modules (logic only) → pipeline (orchestration only) → excel.py (write only)
-Rules:
-- Domain modules do not import from each other
-- loaders.py does not contain business logic
-- pipeline.py does not contain business logic; não abre conexões de DB nem executa bootstrap
-- excel.py does not import domain modules
-- Bootstrap de SQLite (`db.popular_bd_se_vazio`) é responsabilidade da application boundary (`app/main.py`, `ui/gui.py`), executado ANTES de chamar `pipeline.executar_pipeline()`
-- Scripts CLI vivem em `app/cli/` (normalizar, validar_dist, validar_hr, validar_consist); `app/main.py` é o único entry-point, com subcomandos argparse: `executar | normalizar | validar-dist | validar-hr | validar-consist`. Não criar `.py` soltos na raiz.
+
+Flow: entrada/ → loaders → application/pipeline → [ferias|treinamento|atestado|distribuicao] → aplicar_updates → saida/
+
+**Target layer split** (migrado por módulo, ver `PROJECT_STRUCTURE.md` para estado atual):
+
+- `app/domain/` — funções puras + dataclasses. Imports permitidos: stdlib, `app.domain.*`. Imports proibidos: `sqlite3`, `openpyxl`, `app.application.*`, `app.infrastructure.*`. Arquivos nomeados por **negócio** (treinamento, ferias, atestado, core, errors), nunca por camada.
+- `app/application/` — orquestração + ports. `pipeline.py` (orquestração geral), `services/` (use-cases por módulo de negócio), `ports.py` (Protocols). Imports permitidos: stdlib, `app.domain.*`, `typing.Protocol`. Imports proibidos: `app.infrastructure.*` (services dependem de **ports**, não de adapters), `sqlite3`, `openpyxl`.
+- `app/infrastructure/` — adapters de I/O. `loaders.py`, `excel.py`, `db.py`, `paths.py`, `logging_config.py`, `adapters/*.py`. Única camada que toca `sqlite3` / `openpyxl` / filesystem.
+- `app/main.py`, `app/cli/`, `ui/` — composition root. Único lugar onde adapters são instanciados e injetados em services.
+
+**Rules:**
+- Domain modules do not import from each other.
+- loaders.py does not contain business logic.
+- pipeline.py does not contain business logic; não abre conexões de DB nem executa bootstrap.
+- excel.py does not import domain modules.
+- Ports vivem em `app/application/ports.py`. Cada port tem nome de negócio (ex.: `TabelaClassificacao`), não nome técnico (`Repository`). Cada port só é introduzido quando há um consumidor concreto **e** um fake em testes que substitui um recurso difícil de testar (DB, Excel I/O). Cap: um port por refactor.
+- Adapters vivem em `app/infrastructure/adapters/` e implementam ports por composição estrutural (Protocol), sem herança.
+- Forbidden: factories-by-string, dynamic dispatch (`getattr(module, name)()`), service locators, runtime DI containers. Composition root constrói adapters explicitamente.
+- Bootstrap de SQLite (`db.popular_bd_se_vazio`) é responsabilidade da composition root (`app/main.py`, `ui/gui.py`), executado ANTES de criar threads worker. Worker thread NUNCA chama `popular_*`.
+- Writes em SQLite (`registrar_bd`, `registrar_medicao`) são serializados via `threading.Lock` na GUI app singleton. Worker threads adquirem o lock antes de abrir conexão de escrita.
+- Worker thread NUNCA reusa a conexão da composition root (`check_same_thread` violation). Cada worker abre/fecha a sua própria conexão dentro do escopo da tarefa.
+- Scripts CLI vivem em `app/cli/` (normalizar, validar_dist, validar_hr, validar_consist); `app/main.py` é o único entry-point. Não criar `.py` soltos na raiz.
 - Distribuição contratual é persistida em SQLite (carga única a partir do xlsx empacotado via PyInstaller `datas=`); demais entradas permanecem efêmeras via `loaders.py`.
-- Logging de arquivo é setup pela application boundary (`app/main.py`, `ui/gui.py`) via `logging_config.setup_logging()`; rotating handler em `logs/automacao.log`. Idempotente — pode ser chamado múltiplas vezes (tag de handler).
+- Logging de arquivo é setup pela composition root via `logging_config.setup_logging()`; rotating handler em `logs/automacao.log`. Idempotente.
+
+**Migration window:** legacy paths (`app/treinamento.py`, `app/core.py`, `app/loaders.py`, `app/excel.py`, `app/db.py`, `app/paths.py`, `app/errors.py`, `app/logging_config.py`, `app/pipeline.py`) coexistem com a estrutura-alvo até cada um ser movido. Durante a janela de migração:
+- Imports legados continuam válidos.
+- Novos imports devem usar o caminho-alvo (`app.domain.treinamento`, etc.) quando o arquivo já estiver migrado; senão, o caminho atual.
+- `tests/test_layer_boundaries.py` (Step 6) é o enforcement: módulos já em `app/domain/` não podem importar `sqlite3` / `openpyxl`; módulos em `app/application/` não podem importar `app.infrastructure.*`.
+- Migração de férias / atestado / distribuição é **fora do escopo** desta janela. Eles permanecem em `app/*.py` até justificativa concreta.
