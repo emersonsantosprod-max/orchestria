@@ -4,6 +4,13 @@ main.py — Entry point CLI. Wrapper fino sobre app.pipeline.executar_pipeline.
 Toda a orquestração (loaders + pipeline 3 fases) vive em app/pipeline.py.
 Este módulo só resolve caminhos default, interpreta flags opt-in e formata
 saída terminal.
+
+ARCHITECTURAL RULE (enforced by tests/test_layer_boundaries.py):
+  - main.py NUNCA importa app.domain.*
+  - Toda feature de domínio é exposta exclusivamente via parâmetros do
+    pipeline (executar_pipeline). Adicionar nova feature = (a) novo
+    parâmetro em pipeline + (b) novo flag de path aqui. CLI nunca conhece
+    nomes de domínio (treinamento/ferias/atestado) além de rotular paths.
 """
 
 import logging
@@ -39,6 +46,7 @@ def executar_medicao(
     c_trein_custom=None,
     c_ferias_custom=None,
     c_base_cob_custom=None,
+    c_atestado_custom=None,
 ):
     """Resolve caminhos default e delega para pipeline.executar_pipeline (entrada da GUI/tests)."""
     (c_med_pad, c_trein_pad, c_saida_pad,
@@ -55,6 +63,7 @@ def executar_medicao(
     c_treinamentos = c_trein_custom if treinamento_ativo and c_trein_custom else ''
     c_ferias_in    = c_ferias_custom   if ferias_ativo else ''
     c_base_cob_in  = c_base_cob_custom if ferias_ativo else ''
+    c_atestado_in  = c_atestado_custom or ''
 
     if treinamento_ativo and not c_trein_custom:
         c_treinamentos = c_trein_pad
@@ -62,6 +71,7 @@ def executar_medicao(
     qualquer_custom = any([
         c_medicao_custom, c_trein_custom,
         c_ferias_custom, c_base_cob_custom,
+        c_atestado_custom,
     ])
     c_saida = '' if qualquer_custom else c_saida_pad
 
@@ -74,6 +84,7 @@ def executar_medicao(
             caminho_treinamentos=c_treinamentos,
             caminho_ferias=c_ferias_in,
             caminho_base_cobranca=c_base_cob_in,
+            caminho_atestado=c_atestado_in,
             caminho_saida=c_saida,
             conn=conn,
             validar_distribuicao=True,
@@ -100,10 +111,17 @@ def exibir_resumo(resultado):
             )
 
 
-def _comando_executar_medicao() -> int:
+def _comando_executar_medicao(args=None) -> int:
     print('Iniciando Automação de Treinamentos...\n')
+    kwargs = {
+        'c_medicao_custom':   getattr(args, 'medicao', None),
+        'c_trein_custom':     getattr(args, 'treinamentos', None),
+        'c_ferias_custom':    getattr(args, 'ferias', None),
+        'c_base_cob_custom':  getattr(args, 'base_cobranca', None),
+        'c_atestado_custom':  getattr(args, 'atestado', None),
+    }
     try:
-        resultado = executar_medicao()
+        resultado = executar_medicao(**kwargs)
         exibir_resumo(resultado)
         return 0
     except RuntimeError as e:
@@ -121,7 +139,12 @@ def main():
     import argparse
     parser = argparse.ArgumentParser(prog='automacao')
     sub = parser.add_subparsers(dest='cmd')
-    sub.add_parser('executar', help='Pipeline completo (default)')
+    p_exec = sub.add_parser('executar', help='Pipeline completo (default)')
+    p_exec.add_argument('--medicao')
+    p_exec.add_argument('--treinamentos')
+    p_exec.add_argument('--ferias')
+    p_exec.add_argument('--base-cobranca', dest='base_cobranca')
+    p_exec.add_argument('--atestado')
     sub.add_parser('normalizar', help='Normaliza distribuição contratual')
     p_vd = sub.add_parser('validar-dist', help='Valida BD vs Medição')
     from app.cli.validar_dist import build_parser as _build_vd
@@ -134,7 +157,7 @@ def main():
     args = parser.parse_args()
     cmd = args.cmd or 'executar'
     if cmd == 'executar':
-        sys.exit(_comando_executar_medicao())
+        sys.exit(_comando_executar_medicao(args))
     if cmd == 'normalizar':
         from app.cli.normalizar import main as _m
         sys.exit(_m())

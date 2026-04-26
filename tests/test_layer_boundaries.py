@@ -26,6 +26,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 DOMAIN_DIR = ROOT / "app" / "domain"
 APPLICATION_SERVICES_DIR = ROOT / "app" / "application" / "services"
+MAIN_FILE = ROOT / "app" / "main.py"
 
 
 def _imports(path: Path) -> list[str]:
@@ -68,5 +69,19 @@ def test_app_application_services_nao_importa_app_infrastructure():
     for arquivo in _python_files(APPLICATION_SERVICES_DIR):
         erros.extend(_violacoes(arquivo, proibidos))
     assert not erros, "violação de fronteira em app/application/services/:\n" + "\n".join(
+        f"  {p.relative_to(ROOT)}: importa {n}" for p, n in erros
+    )
+
+
+def test_main_nao_importa_app_domain():
+    """CLI wrapper (main.py) não pode conhecer módulos de domínio.
+
+    Features são expostas exclusivamente via parâmetros do
+    pipeline.executar_pipeline. Importar app.domain.* em main.py
+    indicaria que CLI ganhou conhecimento de regra de negócio —
+    regressão arquitetural a ser bloqueada no CI.
+    """
+    erros = _violacoes(MAIN_FILE, ("app.domain",))
+    assert not erros, "main.py não pode importar app.domain.*:\n" + "\n".join(
         f"  {p.relative_to(ROOT)}: importa {n}" for p, n in erros
     )
