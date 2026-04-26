@@ -53,22 +53,14 @@ def carregar_dados_treinamento(caminho_treinamentos: str) -> list[dict]:
     return dados
 
 
-def carregar_dados_ferias(caminho_ferias: str, caminho_base_cobranca: str):
-    """Lê planilha de férias (cabeçalho na linha 5) + tabela base_cobranca."""
-    for c in (caminho_ferias, caminho_base_cobranca):
-        if not os.path.exists(c):
-            raise FileNotFoundError(f"Arquivo não encontrado: {c}")
+def carregar_dados_ferias_apenas(caminho_ferias: str) -> list[dict]:
+    """Lê só a planilha de férias (cabeçalho na linha 5).
 
-    base_cobranca = {}
-    wb = openpyxl.load_workbook(caminho_base_cobranca, read_only=True, data_only=True)
-    for row in wb.active.iter_rows(values_only=True):
-        if row[0] is None:
-            continue
-        chave = str(row[0]).strip().upper()
-        valor = str(row[1]).strip().upper() if len(row) > 1 and row[1] is not None else ''
-        if chave:
-            base_cobranca[chave] = valor
-    wb.close()
+    Usada quando base_cobranca vem do SQLite (db.obter_cobranca) em vez do
+    xlsx — caso de /api/run/ferias após `POST /api/config/base_cobranca`.
+    """
+    if not os.path.exists(caminho_ferias):
+        raise FileNotFoundError(f"Arquivo não encontrado: {caminho_ferias}")
 
     dados_ferias = []
     wb = openpyxl.load_workbook(caminho_ferias, read_only=True, data_only=True)
@@ -87,7 +79,30 @@ def carregar_dados_ferias(caminho_ferias: str, caminho_base_cobranca: str):
             's2':    row[11] if len(row) > 11 else None,
         })
     wb.close()
+    return dados_ferias
 
+
+def carregar_base_cobranca_xlsx(caminho_base_cobranca: str) -> dict[str, str]:
+    """Lê só o xlsx de base_cobranca → {sg_funcao_upper: md_cobranca_upper}."""
+    if not os.path.exists(caminho_base_cobranca):
+        raise FileNotFoundError(f"Arquivo não encontrado: {caminho_base_cobranca}")
+    base_cobranca: dict[str, str] = {}
+    wb = openpyxl.load_workbook(caminho_base_cobranca, read_only=True, data_only=True)
+    for row in wb.active.iter_rows(values_only=True):
+        if row[0] is None:
+            continue
+        chave = str(row[0]).strip().upper()
+        valor = str(row[1]).strip().upper() if len(row) > 1 and row[1] is not None else ''
+        if chave:
+            base_cobranca[chave] = valor
+    wb.close()
+    return base_cobranca
+
+
+def carregar_dados_ferias(caminho_ferias: str, caminho_base_cobranca: str):
+    """Lê planilha de férias (cabeçalho na linha 5) + tabela base_cobranca."""
+    base_cobranca = carregar_base_cobranca_xlsx(caminho_base_cobranca)
+    dados_ferias = carregar_dados_ferias_apenas(caminho_ferias)
     return dados_ferias, base_cobranca
 
 

@@ -58,6 +58,11 @@ CREATE TABLE IF NOT EXISTS bd_treinamentos (
     nome TEXT NOT NULL,
     tipo TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS bd_cobranca (
+    sg_funcao   TEXT NOT NULL,
+    md_cobranca TEXT NOT NULL,
+    remunerado  INTEGER NOT NULL DEFAULT 1
+);
 CREATE TABLE IF NOT EXISTS registro_arquivos (
     tipo         TEXT PRIMARY KEY,
     caminho      TEXT NOT NULL,
@@ -339,3 +344,82 @@ def obter_tabela_treinamento(conn: sqlite3.Connection) -> dict[str, str]:
     """Return {nome_upper: tipo} from bd_treinamentos."""
     rows = conn.execute('SELECT nome, tipo FROM bd_treinamentos').fetchall()
     return {r['nome']: r['tipo'] for r in rows}
+
+
+def registrar_cobranca(path: str | Path, conn: sqlite3.Connection) -> None:
+    """Import base_cobranca.xlsx (sg_funcao, md_cobranca) into bd_cobranca.
+
+    Schema: sg_funcao TEXT, md_cobranca TEXT, remunerado INTEGER.
+    `remunerado` follows the férias domain convention: 0 (zero) iff the
+    md_cobranca string contains 'FÉRIAS S/ DESC' (uppercased), else 1.
+    Keeps obter_cobranca compatible with the dict shape consumed by
+    ferias.gerar_updates_ferias without changing the domain signature.
+    """
+    logger.info('registrar_cobranca: lendo %s', path)
+    wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
+    records = []
+    for row in wb.active.iter_rows(values_only=True):
+        if row[0] is None:
+            continue
+        sg_funcao = str(row[0]).strip().upper()
+        md_cobranca = (
+            str(row[1]).strip().upper() if len(row) > 1 and row[1] is not None else ''
+        )
+        if not sg_funcao:
+            continue
+        remunerado = 0 if md_cobranca == 'FÉRIAS S/ DESC' else 1
+        records.append((sg_funcao, md_cobranca, remunerado))
+    wb.close()
+    logger.info('registrar_cobranca: %d linhas extraídas', len(records))
+
+    conn.execute('DELETE FROM bd_cobranca')
+    conn.executemany(
+        'INSERT INTO bd_cobranca (sg_funcao, md_cobranca, remunerado) VALUES (?,?,?)',
+        records,
+    )
+    conn.execute(
+        'INSERT OR REPLACE INTO registro_arquivos (tipo, caminho, importado_em) VALUES (?,?,?)',
+        ('cobranca', str(path), datetime.now().isoformat()),
+    )
+    conn.commit()
+
+
+def obter_cobranca(conn: sqlite3.Connection) -> dict[str, str]:
+    """Return {sg_funcao_upper: md_cobranca_upper} from bd_cobranca.
+
+    Same shape that loaders.carregar_dados_ferias produces from the xlsx,
+    so the férias domain consumes either source identically.
+    """
+    rows = conn.execute('SELECT sg_funcao, md_cobranca FROM bd_cobranca').fetchall()
+    return {r['sg_funcao']: r['md_cobranca'] for r in rows}
+
+
+def popular_cobranca_se_vazio(conn: sqlite3.Connection, xlsx: Path | None = None) -> bool:
+    """Bootstrap idempotente da tabela bd_cobranca a partir de um xlsx informado.
+
+    Diferente de bd_distribuicao/bd_treinamentos, cobrança ainda NÃO é
+    empacotada via PyInstaller datas — a fonte canônica é o upload do
+    usuário em /api/config/base_cobranca. Esta função existe para o cenário
+    onde o composition root quer pré-popular (ex.: GUI desktop com xlsx
+    local conhecido). Retorna False se já populada ou se xlsx não fornecido.
+    """
+    logger.info('popular_cobranca_se_vazio: verificando estado atual')
+    row_count = conn.execute('SELECT COUNT(*) FROM bd_cobranca').fetchone()[0]
+    reg = conn.execute(
+        "SELECT 1 FROM registro_arquivos WHERE tipo='cobranca' LIMIT 1"
+    ).fetchone()
+    if row_count > 0 or reg is not None:
+        logger.info('popular_cobranca_se_vazio: já populado, no-op')
+        return False
+    if xlsx is None or not Path(xlsx).exists():
+        logger.info('popular_cobranca_se_vazio: xlsx não fornecido, no-op')
+        return False
+    try:
+        conn.execute('BEGIN')
+        registrar_cobranca(xlsx, conn)
+    except Exception:
+        conn.rollback()
+        logger.exception('popular_cobranca_se_vazio: rollback após falha')
+        raise
+    logger.info('popular_cobranca_se_vazio: bootstrap concluído')
+    return True

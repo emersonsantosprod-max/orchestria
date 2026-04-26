@@ -124,7 +124,8 @@ def executar_pipeline(
         raise ValueError("validar_distribuicao=True requires conn")
 
     treinamento_ativo = bool(caminho_treinamentos and conn is not None)
-    ferias_ativo      = bool(caminho_ferias and caminho_base_cobranca)
+    cobranca_via_sqlite = bool(caminho_ferias and not caminho_base_cobranca and conn is not None)
+    ferias_ativo      = bool(caminho_ferias and (caminho_base_cobranca or cobranca_via_sqlite))
     atestado_ativo    = bool(caminho_atestado)
     logger.info(
         'executar_pipeline: treinamento=%s ferias=%s atestado=%s validar_dist=%s',
@@ -155,7 +156,18 @@ def executar_pipeline(
         if treinamento_ativo:
             dados = loaders.carregar_dados_treinamento(caminho_treinamentos)
         if ferias_ativo:
-            dados_ferias, base_cobranca = loaders.carregar_dados_ferias(caminho_ferias, caminho_base_cobranca)
+            if cobranca_via_sqlite:
+                dados_ferias = loaders.carregar_dados_ferias_apenas(caminho_ferias)
+                base_cobranca = db.obter_cobranca(conn)
+                if not base_cobranca:
+                    raise ValueError(
+                        "bd_cobranca está vazia. Forneça caminho_base_cobranca ou "
+                        "popule a tabela via registrar_cobranca/popular_cobranca_se_vazio."
+                    )
+            else:
+                dados_ferias, base_cobranca = loaders.carregar_dados_ferias(
+                    caminho_ferias, caminho_base_cobranca
+                )
         if atestado_ativo:
             dados_atestado = loaders.carregar_dados_atestado(caminho_atestado)
 
