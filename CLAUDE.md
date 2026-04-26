@@ -60,7 +60,7 @@ Skills em `.claude/skills/`. Claude Code injeta automaticamente as com `paths:` 
 ### react
 **Quando:** ao trabalhar em `ui/**/*.tsx` ou quando a migração de GUI para React iniciar.
 **Auto-trigger:** `ui/**/*.tsx`, `ui/**/*.ts`, `ui/**/*.jsx`.
-**Status:** stack a definir. Skill cobre padrões genéricos React/TypeScript. Atualizar com especificidades (componentes, roteamento, estado global) quando stack for escolhida.
+**Status:** Vite + React 18 (JSX, sem TypeScript no momento). Frontend vive em `ui/web/` e coexiste com a GUI Tkinter (`ui/gui.py`) durante a migração. Tokens visuais em `ui/web/src/styles/colors_and_type.css` (Manserv brand book). Componente único `ui/web/src/App.jsx` portado de `data/entrada/ui_kits/automacao_medicao/App.jsx` — não fragmentar em múltiplos arquivos sem ganho de domínio. API HTTP/WS é mockada (`API` interno) até o backend FastAPI existir.
 
 ## ARCHITECTURE
 

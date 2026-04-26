@@ -1,0 +1,163 @@
+/* ============================================================
+   Manserv Design System — Colors & Type
+   Source: msv_cores_fontes.pdf (brand book excerpt)
+   Adapted for Vite: fonts served from /fonts (public/).
+   ============================================================ */
+
+/* ---------- Fonts (subset shipped) ---------- */
+@font-face { font-family: "IBM Plex Sans"; src: url("/fonts/IBMPlexSans-Light.ttf")    format("truetype"); font-weight: 300; font-style: normal; font-display: swap; }
+@font-face { font-family: "IBM Plex Sans"; src: url("/fonts/IBMPlexSans-Regular.ttf")  format("truetype"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "IBM Plex Sans"; src: url("/fonts/IBMPlexSans-Italic.ttf")   format("truetype"); font-weight: 400; font-style: italic; font-display: swap; }
+@font-face { font-family: "IBM Plex Sans"; src: url("/fonts/IBMPlexSans-Medium.ttf")   format("truetype"); font-weight: 500; font-style: normal; font-display: swap; }
+@font-face { font-family: "IBM Plex Sans"; src: url("/fonts/IBMPlexSans-SemiBold.ttf") format("truetype"); font-weight: 600; font-style: normal; font-display: swap; }
+@font-face { font-family: "IBM Plex Sans"; src: url("/fonts/IBMPlexSans-Bold.ttf")     format("truetype"); font-weight: 700; font-style: normal; font-display: swap; }
+
+:root {
+  --msv-chumbo:  #232323;
+  --msv-laranja: #ff460a;
+  --msv-branco:  #ffffff;
+
+  --msv-subtom-branco:  #ededed;
+  --msv-subtom-chumbo:  #111111;
+  --msv-subtom-laranja: #e2360e;
+
+  --bg:           var(--msv-branco);
+  --bg-subtle:    var(--msv-subtom-branco);
+  --bg-inverse:   var(--msv-chumbo);
+  --bg-inverse-2: var(--msv-subtom-chumbo);
+
+  --fg:           var(--msv-chumbo);
+  --fg-muted:     #5a5a5a;
+  --fg-subtle:    #8a8a8a;
+  --fg-disabled:  #c2c2c2;
+  --fg-inverse:   var(--msv-branco);
+
+  --accent:         var(--msv-laranja);
+  --accent-pressed: var(--msv-subtom-laranja);
+  --accent-soft:    #ffe9e1;
+
+  --border:        #d9d9d9;
+  --border-strong: #b5b5b5;
+  --border-inverse:#3a3a3a;
+
+  --status-success: #2e7d4f;
+  --status-warning: #d98b00;
+  --status-danger:  #c1271a;
+  --status-info:    #1f5aa8;
+
+  --font-sans:   "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  --font-system: "Microsoft Sans Serif", "Segoe UI", Tahoma, sans-serif;
+  --font-mono:   "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --weight-light:    300;
+  --weight-regular:  400;
+  --weight-medium:   500;
+  --weight-semibold: 600;
+  --weight-bold:     700;
+
+  --fs-xs:  12px;
+  --fs-sm:  14px;
+  --fs-md:  16px;
+  --fs-lg:  18px;
+  --fs-xl:  22px;
+  --fs-2xl: 28px;
+  --fs-3xl: 36px;
+  --fs-4xl: 48px;
+  --fs-5xl: 64px;
+  --fs-6xl: 88px;
+
+  --lh-tight:  1.1;
+  --lh-snug:   1.25;
+  --lh-normal: 1.5;
+  --lh-loose:  1.65;
+
+  --tracking-tight:  -0.02em;
+  --tracking-normal: 0;
+  --tracking-wide:   0.04em;
+  --tracking-caps:   0.08em;
+
+  --space-0:  0;
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  24px;
+  --space-6:  32px;
+  --space-7:  48px;
+  --space-8:  64px;
+  --space-9:  96px;
+  --space-10: 128px;
+
+  --radius-none: 0;
+  --radius-xs:   2px;
+  --radius-sm:   4px;
+  --radius-md:   8px;
+  --radius-lg:   12px;
+  --radius-xl:   16px;
+  --radius-pill: 999px;
+
+  --shadow-xs: 0 1px 2px rgba(17, 17, 17, 0.06);
+  --shadow-sm: 0 2px 4px rgba(17, 17, 17, 0.08);
+  --shadow-md: 0 6px 16px rgba(17, 17, 17, 0.10);
+  --shadow-lg: 0 16px 40px rgba(17, 17, 17, 0.14);
+  --shadow-focus: 0 0 0 3px rgba(255, 70, 10, 0.30);
+
+  --ease-standard: cubic-bezier(0.2, 0.0, 0.0, 1);
+  --ease-out:      cubic-bezier(0.0, 0.0, 0.2, 1);
+  --ease-in:       cubic-bezier(0.4, 0.0, 1, 1);
+  --dur-fast: 120ms;
+  --dur-base: 200ms;
+  --dur-slow: 320ms;
+
+  --msv-subtom-chumbo-deep: #1a1a1a;
+}
+
+html, body {
+  font-family: var(--font-sans);
+  font-size: var(--fs-md);
+  line-height: var(--lh-normal);
+  color: var(--fg);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+h1, .msv-h1 { font-weight: var(--weight-semibold); font-size: var(--fs-4xl); line-height: var(--lh-tight); letter-spacing: var(--tracking-tight); margin: 0; }
+h2, .msv-h2 { font-weight: var(--weight-semibold); font-size: var(--fs-3xl); line-height: var(--lh-snug);  letter-spacing: var(--tracking-tight); margin: 0; }
+h3, .msv-h3 { font-weight: var(--weight-semibold); font-size: var(--fs-2xl); line-height: var(--lh-snug);  margin: 0; }
+h4, .msv-h4 { font-weight: var(--weight-semibold); font-size: var(--fs-xl);  line-height: var(--lh-snug);  margin: 0; }
+h5, .msv-h5 { font-weight: var(--weight-semibold); font-size: var(--fs-lg);  line-height: var(--lh-snug);  margin: 0; }
+h6, .msv-h6 { font-weight: var(--weight-semibold); font-size: var(--fs-md);  line-height: var(--lh-snug);  margin: 0; }
+
+p, .msv-body { font-size: var(--fs-md); line-height: var(--lh-normal); color: var(--fg); }
+.msv-body-sm { font-size: var(--fs-sm); line-height: var(--lh-normal); color: var(--fg-muted); }
+.msv-body-lg { font-size: var(--fs-lg); line-height: var(--lh-loose); color: var(--fg); }
+
+.msv-eyebrow {
+  font-weight: var(--weight-semibold);
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+  color: var(--accent);
+}
+.msv-label   { font-weight: var(--weight-medium); font-size: var(--fs-sm); color: var(--fg); }
+.msv-caption { font-size: var(--fs-xs); color: var(--fg-muted); line-height: var(--lh-normal); }
+
+code, kbd, samp, pre, .msv-mono { font-family: var(--font-mono); font-size: 0.92em; }
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { color: var(--accent-pressed); text-decoration: underline; text-underline-offset: 2px; }
+a:focus-visible { outline: none; box-shadow: var(--shadow-focus); border-radius: var(--radius-xs); }
+
+::selection { background: var(--msv-laranja); color: var(--msv-branco); }
+
+html, body, #root { height: 100%; margin: 0; }
+body { background: #fff; }
+@keyframes msvspin  { to { transform: rotate(360deg); } }
+@keyframes msvpulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+button:focus-visible { outline: none; box-shadow: var(--shadow-focus); border-radius: 4px; }
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-thumb       { background: rgba(0, 0, 0, 0.16); border-radius: 4px; }
+*::-webkit-scrollbar-thumb:hover { background: rgba(0, 0, 0, 0.28); }
+.log-panel ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.12); }
