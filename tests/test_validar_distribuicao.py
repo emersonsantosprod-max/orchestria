@@ -11,7 +11,7 @@ from app.infrastructure.db import (
     registrar_bd,
     registrar_medicao,
 )
-from app.validar_distribuicao import (
+from app.domain.distribuicao import (
     ERRO_EXCESSO_RATEIO,
     ERRO_INSUFICIENCIA_RATEIO,
     ERRO_LINHA_AUSENTE,
