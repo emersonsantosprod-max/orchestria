@@ -19,6 +19,28 @@
 import { useState, useRef, useEffect, useReducer } from 'react';
 
 // ─────────────────────────────────────────────────────────────
+// Backend contract — endpoints that exist today.
+// Modules without a route yield a clean RUN_NOT_IMPLEMENTED.
+// ─────────────────────────────────────────────────────────────
+const ENDPOINTS = {
+  treinamentos:   { url: '/api/run/treinamentos',   relatorioField: 'catalogo' },
+  // ferias:       { url: '/api/run/ferias',         relatorioField: 'relatorio' },
+  // atestados:    { url: '/api/run/atestados',      relatorioField: 'relatorio' },
+  // 'validar-hr': { url: '/api/run/validar-hr',     relatorioField: null },
+  // 'validar-dist': { url: '/api/run/validar-dist', relatorioField: null },
+};
+
+async function fetchJSON(url, init) {
+  const r = await fetch(url, init);
+  if (!r.ok) {
+    let msg = r.statusText;
+    try { const j = await r.json(); msg = j.detail || j.message || msg; } catch { /* ignore */ }
+    const err = new Error(msg); err.code = `HTTP_${r.status}`; throw err;
+  }
+  return r.json();
+}
+
+// ─────────────────────────────────────────────────────────────
 // STATE MODEL
 // ─────────────────────────────────────────────────────────────
 const initialState = {
@@ -49,7 +71,7 @@ function reducer(state, ev) {
         ...state,
         run: initialState.run,
         modules: ev.module
-          ? { ...state.modules, [ev.module]: { ...state.modules[ev.module], lastRun: { ok: true, at: new Date().toISOString(), summary: ev.summary } } }
+          ? { ...state.modules, [ev.module]: { ...state.modules[ev.module], lastRun: { ok: true, at: new Date().toISOString(), summary: ev.summary, output: ev.output || null } } }
           : state.modules,
       };
     case 'RUN_END_ERR':
@@ -76,33 +98,43 @@ function reducer(state, ev) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// FAKE API — replace each call with a real fetch when the backend lands.
+// API — real backend (FastAPI in app/api/). Endpoints not yet implemented
+// degrade with RUN_NOT_IMPLEMENTED so the UI stays usable as routes land.
 // ─────────────────────────────────────────────────────────────
 const API = {
+  // POST /api/session/medicao does not exist yet on the backend. We accept the
+  // file client-side, hold it for the run call, and surface mes_referencia
+  // as null until /api/initial-data or a dedicated endpoint exposes it.
   loadMedicao(file) {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const mes = '2026-04';
-        resolve({ mes_referencia: mes, medicao: { name: file.name, size: file.size } });
-      }, 900);
+    return Promise.resolve({
+      mes_referencia: null,
+      medicao: { name: file.name, size: file.size },
     });
   },
-  run(action) {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const map = {
-          treinamentos:  { summary: '236 linhas processadas · 3 inconsistências' },
-          ferias:        { summary: '184 colaboradores · 12 períodos aplicados' },
-          atestados:     { summary: '47 atestados aplicados · 1 fora do período' },
-          'validar-hr':  { summary: 'HR íntegro · 0 divergências encontradas' },
-          'validar-dist':{ summary: 'Distribuição validada · 2 contratos sem rateio' },
-        };
-        resolve(map[action] || { summary: 'OK' });
-      }, 1700);
-    });
+  initialData() { return fetchJSON('/api/initial-data'); },
+
+  run(action, { medicao, relatorio } = {}) {
+    const cfg = ENDPOINTS[action];
+    if (!cfg) {
+      const err = new Error(`Endpoint /api/run/${action} ainda não implementado no backend.`);
+      err.code = 'RUN_NOT_IMPLEMENTED';
+      return Promise.reject(err);
+    }
+    if (!medicao) {
+      const err = new Error('Carregue a medição antes de executar.');
+      err.code = 'SESSION_NOT_INITIALIZED';
+      return Promise.reject(err);
+    }
+    const fd = new FormData();
+    fd.append('medicao', medicao);
+    if (cfg.relatorioField && relatorio) fd.append(cfg.relatorioField, relatorio);
+    return fetchJSON(cfg.url, { method: 'POST', body: fd });
   },
-  saveConfig(key, file) {
-    return new Promise((resolve) => setTimeout(() => resolve({ key, file: { name: file.name } }), 600));
+
+  saveConfig(key, _file) {
+    const err = new Error(`POST /api/config/${key} ainda não implementado no backend.`);
+    err.code = 'CONFIG_NOT_IMPLEMENTED';
+    return Promise.reject(err);
   },
 };
 
@@ -186,9 +218,13 @@ const CONFIG_KEYS = [
 export default function App() {
   const [state, dispatch] = useReducer(reducer, initialState);
   const [view, setView] = useState('execucao');
+  // C5: keep actual File blobs in refs (reducer holds only metadata).
+  const medicaoFileRef = useRef(null);
+  const relatorioFilesRef = useRef({});
   useLogStream(dispatch, state.run);
 
   const blocked = state.run.lock;
+  const fileRefs = { medicao: medicaoFileRef, relatorios: relatorioFilesRef };
 
   return (
     <div data-screen-label="Automação de Medição" style={{
@@ -199,7 +235,7 @@ export default function App() {
       fontFamily: 'var(--font-sans)', color: 'var(--fg)',
     }}>
       <Sidebar view={view} setView={setView} session={state.session} blocked={blocked} />
-      <Main view={view} state={state} dispatch={dispatch} blocked={blocked} />
+      <Main view={view} state={state} dispatch={dispatch} blocked={blocked} fileRefs={fileRefs} />
     </div>
   );
 }
@@ -276,7 +312,7 @@ function Sidebar({ view, setView, session, blocked }) {
   );
 }
 
-function Main({ view, state, dispatch, blocked }) {
+function Main({ view, state, dispatch, blocked, fileRefs }) {
   return (
     <div style={{
       display: 'grid',
@@ -286,7 +322,7 @@ function Main({ view, state, dispatch, blocked }) {
     }}>
       <div style={{ overflow: 'auto', minWidth: 0 }}>
         {view === 'execucao'
-          ? <ExecucaoView state={state} dispatch={dispatch} blocked={blocked} />
+          ? <ExecucaoView state={state} dispatch={dispatch} blocked={blocked} fileRefs={fileRefs} />
           : <ConfigView   state={state} dispatch={dispatch} blocked={blocked} />}
       </div>
       <LogPanel logs={state.logs} run={state.run} dispatch={dispatch} />
@@ -294,25 +330,25 @@ function Main({ view, state, dispatch, blocked }) {
   );
 }
 
-function ExecucaoView({ state, dispatch, blocked }) {
+function ExecucaoView({ state, dispatch, blocked, fileRefs }) {
   return (
     <div style={{ padding: '28px 32px 48px', maxWidth: 920 }}>
       <Header title="Execução" subtitle="Carregue a medição do mês e execute os módulos de lançamento." />
       {state.apiError && (
         <ApiErrorBanner err={state.apiError} onDismiss={() => dispatch({ type: 'API_ERROR', error: null })} />
       )}
-      <SessionBlock state={state} dispatch={dispatch} blocked={blocked} />
+      <SessionBlock state={state} dispatch={dispatch} blocked={blocked} fileRefs={fileRefs} />
       <SectionTitle>Módulos</SectionTitle>
       <div style={{ display: 'grid', gap: 10 }}>
         {MODULES.map(m => (
-          <ModuleRow key={m.id} module={m} state={state} dispatch={dispatch} blocked={blocked} />
+          <ModuleRow key={m.id} module={m} state={state} dispatch={dispatch} blocked={blocked} fileRefs={fileRefs} />
         ))}
       </div>
     </div>
   );
 }
 
-function SessionBlock({ state, dispatch, blocked }) {
+function SessionBlock({ state, dispatch, blocked, fileRefs }) {
   const fileRef = useRef(null);
   const { session, run } = state;
   const isLoadingSession = run.action === 'session/medicao';
@@ -322,16 +358,20 @@ function SessionBlock({ state, dispatch, blocked }) {
     const f = e.target.files?.[0]; if (!f) return;
     e.target.value = '';
     dispatch({ type: 'RUN_START', action: 'session/medicao' });
+    fileRefs.medicao.current = f;  // C5: hold the actual File for run-time multipart
     API.loadMedicao(f).then(res => {
       dispatch({ type: 'SESSION_LOADED', mes: res.mes_referencia, medicao: res.medicao });
       dispatch({ type: 'RUN_END_OK', summary: 'Sessão ativada' });
     }).catch(err => {
+      fileRefs.medicao.current = null;
       dispatch({ type: 'RUN_END_ERR', error: { code: err.code || 'SESSION_NOT_INITIALIZED', message: err.message || 'Falha ao ler medição' } });
     });
   }
 
   function clear() {
     if (blocked) return;
+    fileRefs.medicao.current = null;
+    fileRefs.relatorios.current = {};
     dispatch({ type: 'SESSION_CLEARED' });
     dispatch({ type: 'LOG', entry: { ts: new Date().toISOString(), level: 'info', source: 'session', msg: 'Sessão encerrada' } });
   }
@@ -375,7 +415,7 @@ function SessionBlock({ state, dispatch, blocked }) {
   );
 }
 
-function ModuleRow({ module, state, dispatch, blocked }) {
+function ModuleRow({ module, state, dispatch, blocked, fileRefs }) {
   const m = state.modules[module.id] || {};
   const session = state.session;
   const sessionOff = !session.active;
@@ -396,14 +436,21 @@ function ModuleRow({ module, state, dispatch, blocked }) {
   function onRel(e) {
     const f = e.target.files?.[0]; if (!f) return;
     e.target.value = '';
+    fileRefs.relatorios.current[module.id] = f;  // C5: keep blob for multipart
     dispatch({ type: 'MODULE_RELATORIO', module: module.id, file: { name: f.name, size: f.size } });
     dispatch({ type: 'LOG', entry: { ts: new Date().toISOString(), level: 'info', source: module.id, msg: `Relatório anexado: ${f.name}` } });
   }
   function run() {
     if (!canRun) return;
     dispatch({ type: 'RUN_START', action: module.id });
-    API.run(module.id).then(res => {
-      dispatch({ type: 'RUN_END_OK', module: module.id, summary: res.summary });
+    const payload = {
+      medicao: fileRefs.medicao.current,
+      relatorio: fileRefs.relatorios.current[module.id] || null,
+    };
+    API.run(module.id, payload).then(res => {
+      const summary = res.summary
+        || `${res.processados ?? 0} processado(s) · ${res.atualizados ?? 0} atualizado(s) · ${(res.inconsistencias?.length ?? 0)} inconsistência(s)`;
+      dispatch({ type: 'RUN_END_OK', module: module.id, summary, output: res.arquivo_saida || null });
     }).catch(err => {
       dispatch({ type: 'RUN_END_ERR', module: module.id, error: { code: err.code || 'RUN_FAILED', message: err.message || 'Falha de execução' } });
     });
