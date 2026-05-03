@@ -37,17 +37,7 @@ def _normalizar_celula(v):
 def ler_xlsx_contratual(
     path: str | Path,
 ) -> tuple[tuple, list[tuple], list[dict]]:
-    """Lê o xlsx contratual e devolve ``(headers, data_rows, header_warnings)``.
-
-    - ``headers``: tupla com o conteúdo da primeira linha que contém a célula
-      ``'SIGLA'``.
-    - ``data_rows``: linhas seguintes (sem o header), cada uma como tupla.
-    - ``header_warnings``: lista contendo ``AVISO_HEADER_DUPLICADO`` se mais
-      de uma linha contiver a célula ``'SIGLA'``.
-
-    Levanta :class:`DistribuicaoContratualMalformadaError` se nenhuma linha
-    contiver a célula ``'SIGLA'``.
-    """
+    """Lê o xlsx contratual e devolve ``(headers, data_rows, header_warnings)``."""
     wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
     try:
         ws = wb.active

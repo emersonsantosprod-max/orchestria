@@ -22,7 +22,7 @@ from app.domain.distribuicao_contratual import (
     parse_distribuicao_cols,
     validar_distribuicao_cobranca,
 )
-from app.infrastructure.adapters.excel_distribuicao_contratual import (
+from app.infrastructure.excel_distribuicao import (
     ler_xlsx_contratual,
 )
 

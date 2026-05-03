@@ -9,6 +9,7 @@ from pathlib import Path
 from tkinter import filedialog
 
 from app.application.pipeline import executar_pipeline, salvar_relatorio_inconsistencias
+from app.domain.distribuicao import gerar_relatorio, validar_aderencia_distribuicao
 from app.domain.errors import (
     ArquivoAbertoError,
     ArquivoNaoEncontradoError,
@@ -16,10 +17,9 @@ from app.domain.errors import (
     ConversaoArquivoError,
     PlanilhaInvalidaError,
 )
-from app.infrastructure import db
+from app.infrastructure import data
 from app.infrastructure.loaders import carregar_medicao_hr
-from app.domain.distribuicao import gerar_relatorio, validar_aderencia_distribuicao
-from app.infrastructure.adapters.relatorio_distribuicao import salvar_relatorio
+from app.infrastructure.relatorio_distribuicao import salvar_relatorio
 from app.validar_horas import (
     _salvar_relatorio as _salvar_relatorio_hr,
 )
@@ -87,7 +87,7 @@ def _executar_fluxo(ctx: GuiContext, titulo_log: str, prompts, montar_kwargs):
         conn = None
         try:
             logger.info('fluxo "%s": abrindo conexão SQLite (worker thread, read-only)', titulo_log)
-            conn = db.conectar()
+            conn = data.conectar()
             ctx.imprimir_log("Fase 1/3: Lendo arquivos (modo otimizado)...\n")
             logger.info('fluxo "%s": executar_pipeline', titulo_log)
             resultado = executar_pipeline(
@@ -166,8 +166,8 @@ def iniciar_validacao(ctx: GuiContext):
 
     conn = None
     try:
-        conn = db.conectar()
-        registros = db.obter_registro_arquivos(conn)
+        conn = data.conectar()
+        registros = data.obter_registro_arquivos(conn)
     except Exception as e:
         logger.exception('Erro no preâmbulo de validação')
         ctx.imprimir_log(f"\n[ERRO] {mensagem_erro(e)}\n")
@@ -204,22 +204,22 @@ def iniciar_validacao(ctx: GuiContext):
     def tarefa():
         conn = None
         try:
-            conn = db.conectar()
+            conn = data.conectar()
             avisos_import = []
 
             if caminho_bd or caminho_medicao:
                 with ctx.db_write_lock:
                     if caminho_bd:
                         ctx.imprimir_log("Registrando BD...\n")
-                        db.registrar_bd(caminho_bd, conn)
+                        data.registrar_bd(caminho_bd, conn)
                     if caminho_medicao:
                         ctx.imprimir_log("Registrando Medição...\n")
-                        avisos = db.registrar_medicao(caminho_medicao, conn)
+                        avisos = data.registrar_medicao(caminho_medicao, conn)
                         avisos_import.extend(avisos)
 
-            registros_atuais = db.obter_registro_arquivos(conn)
-            bd_records       = db.obter_bd(conn)
-            medicao_records  = db.obter_medicao(conn)
+            registros_atuais = data.obter_registro_arquivos(conn)
+            bd_records       = data.obter_bd(conn)
+            medicao_records  = data.obter_medicao(conn)
 
             inconsistencias = validar_aderencia_distribuicao(bd_records, medicao_records)
 

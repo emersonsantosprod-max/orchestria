@@ -17,12 +17,11 @@ import logging
 import os
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 from app.application import pipeline as service
-from app.infrastructure import db
+from app.infrastructure import data
 from app.infrastructure.logging_config import setup_logging
 
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 logger = logging.getLogger(__name__)
 
 salvar_relatorio_inconsistencias = service.salvar_relatorio_inconsistencias
@@ -75,10 +74,10 @@ def executar_medicao(
     ])
     c_saida = '' if qualquer_custom else c_saida_pad
 
-    conn = db.conectar()
+    conn = data.conectar()
     try:
-        db.popular_bd_se_vazio(conn)
-        db.popular_treinamentos_se_vazio(conn)
+        data.popular_bd_se_vazio(conn)
+        data.popular_treinamentos_se_vazio(conn)
         resultado = service.executar_pipeline(
             caminho_medicao=c_medicao,
             caminho_treinamentos=c_treinamentos,

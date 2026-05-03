@@ -7,7 +7,8 @@ import argparse
 import sys
 from pathlib import Path
 
-from app.infrastructure.db import (
+from app.domain.distribuicao import gerar_relatorio, validar_aderencia_distribuicao
+from app.infrastructure.data import (
     conectar,
     obter_bd,
     obter_medicao,
@@ -16,9 +17,8 @@ from app.infrastructure.db import (
     registrar_bd,
     registrar_medicao,
 )
-from app.domain.distribuicao import gerar_relatorio, validar_aderencia_distribuicao
-from app.infrastructure.adapters.relatorio_distribuicao import salvar_relatorio
 from app.infrastructure.paths import db_path
+from app.infrastructure.relatorio_distribuicao import salvar_relatorio
 
 
 def cmd_registrar_bd(path_str: str, conn) -> int:

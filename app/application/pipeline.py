@@ -34,9 +34,9 @@ from app.domain.errors import (
     AutomacaoError,
     PlanilhaInvalidaError,
 )
-from app.infrastructure import db, loaders
+from app.infrastructure import data, loaders
 from app.infrastructure import excel as writer
-from app.infrastructure.adapters.sqlite_tabela_classificacao import SqliteTabelaClassificacao
+from app.infrastructure.data import TreinamentosRepository
 
 logger = logging.getLogger(__name__)
 
@@ -143,7 +143,7 @@ def executar_pipeline(
 
     servico_treinamentos: LancarTreinamentosService | None = None
     if treinamento_ativo:
-        tabela_classif = SqliteTabelaClassificacao(conn)
+        tabela_classif = TreinamentosRepository(conn)
         if not tabela_classif.obter():
             raise ValueError(
                 "bd_treinamentos está vazio. Verifique se assets/base_treinamentos.xlsx "
@@ -158,7 +158,7 @@ def executar_pipeline(
         if ferias_ativo:
             if cobranca_via_sqlite:
                 dados_ferias = loaders.carregar_dados_ferias_apenas(caminho_ferias)
-                base_cobranca = db.obter_cobranca(conn)
+                base_cobranca = data.obter_cobranca(conn)
                 if not base_cobranca:
                     raise ValueError(
                         "bd_cobranca está vazia. Forneça caminho_base_cobranca ou "
@@ -260,7 +260,7 @@ def executar_pipeline(
 
     inconst_validacao = []
     if validar_distribuicao:
-        bd_records = db.obter_bd(conn)
+        bd_records = data.obter_bd(conn)
         if bd_records:
             if faltantes_validacao:
                 inconst_validacao = [inconsistencia(

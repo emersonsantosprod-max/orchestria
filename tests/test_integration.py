@@ -4,7 +4,7 @@ from unittest.mock import patch
 import openpyxl
 
 from app import main
-from app.infrastructure import db
+from app.infrastructure import data
 
 
 def test_fluxo_completo(tmp_path):
@@ -22,15 +22,15 @@ def test_fluxo_completo(tmp_path):
     db_file = str(tmp_path / "test.db")
 
     # Pre-populate bd_treinamentos so pipeline can resolve classification.
-    conn_seed = db.conectar(db_file)
-    db.registrar_base_treinamentos(base_tr, conn_seed)
+    conn_seed = data.conectar(db_file)
+    data.registrar_base_treinamentos(base_tr, conn_seed)
     conn_seed.close()
 
     # definir_caminhos agora retorna 5 itens: (med, trein, saida, ferias, base_cob)
     with patch(
         'app.main.definir_caminhos',
         return_value=(medicao, trein, saida, '', ''),
-    ), patch('app.infrastructure.db.conectar', return_value=db.conectar(db_file)):
+    ), patch('app.infrastructure.data.conectar', return_value=data.conectar(db_file)):
         res = main.executar_medicao()
 
     # Devemos ter 3 registros processados com as fixtures ("TR-SIMPLES", "TR-REMUNERADO", "TR-MULTIDIA")

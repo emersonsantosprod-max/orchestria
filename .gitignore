@@ -15,7 +15,7 @@ dist/
 .pytest_cache/
 
 # Runtime data — entire directory excluded, no exceptions
-data/
+/data/
 
 # Baseline outputs — regenerados sob demanda; ver scripts/diff_medicao.py
 baseline/

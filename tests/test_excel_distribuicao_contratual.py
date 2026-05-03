@@ -5,7 +5,7 @@ from __future__ import annotations
 import openpyxl
 import pytest
 
-from app.infrastructure.adapters.excel_distribuicao_contratual import (
+from app.infrastructure.excel_distribuicao import (
     DistribuicaoContratualMalformadaError,
     escrever_xlsx_normalizado,
     ler_xlsx_contratual,

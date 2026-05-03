@@ -1,4 +1,4 @@
-"""salvar_relatorio_distribuicao: escreve relatório txt em saida_dir()."""
+"""salvar_relatorio: escreve relatório txt em saida_dir()."""
 
 from __future__ import annotations
 

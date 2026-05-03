@@ -3,20 +3,20 @@ import tempfile
 import openpyxl
 import pytest
 
-from app.infrastructure.db import (
-    _normalizar_pct,
-    conectar,
-    obter_bd,
-    obter_medicao,
-    registrar_bd,
-    registrar_medicao,
-)
 from app.domain.distribuicao import (
     ERRO_EXCESSO_RATEIO,
     ERRO_INSUFICIENCIA_RATEIO,
     ERRO_LINHA_AUSENTE,
     validar_aderencia_distribuicao,
 )
+from app.infrastructure.data import (
+    conectar,
+    obter_bd,
+    obter_medicao,
+    registrar_bd,
+    registrar_medicao,
+)
+from app.infrastructure.data.bootstrap import _normalizar_pct
 
 
 def _make_bd_xlsx(rows: list[tuple]) -> str:

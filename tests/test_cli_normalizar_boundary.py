@@ -7,7 +7,7 @@ from unittest.mock import patch
 import openpyxl
 
 from app.cli import normalizar as cli
-from app.infrastructure.adapters.excel_distribuicao_contratual import (
+from app.infrastructure.excel_distribuicao import (
     DistribuicaoContratualMalformadaError,
 )
 
