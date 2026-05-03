@@ -4,7 +4,7 @@ from datetime import date
 import openpyxl
 
 from app.application import pipeline
-from app.infrastructure import db
+from app.infrastructure import data
 
 
 def _criar_atestado_xlsx(caminho: str) -> None:
@@ -23,7 +23,7 @@ def test_pipeline_atestado_aplica_observacao(tmp_path):
     atestado_path = str(tmp_path / 'atestado_mock.xlsx')
     _criar_atestado_xlsx(atestado_path)
 
-    conn = db.conectar(str(tmp_path / 'test.db'))
+    conn = data.conectar(str(tmp_path / 'test.db'))
     try:
         resultado = pipeline.executar_pipeline(
             caminho_medicao=medicao,

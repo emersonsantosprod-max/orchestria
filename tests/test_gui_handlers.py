@@ -71,7 +71,7 @@ def test_executar_fluxo_reabilita_botoes_quando_conectar_falha(monkeypatch):
     def _raise(*_a, **_kw):
         raise sqlite3.OperationalError('database is locked')
 
-    monkeypatch.setattr(gui_handlers.db, 'conectar', _raise)
+    monkeypatch.setattr(gui_handlers.data, 'conectar', _raise)
 
     ctx, fake = _ctx()
     gui_handlers.iniciar_lancamento(ctx)
@@ -92,13 +92,13 @@ def test_executar_fluxo_worker_nao_chama_popular(monkeypatch):
         def close(self):
             pass
 
-    monkeypatch.setattr(gui_handlers.db, 'conectar', lambda: _FakeConn())
+    monkeypatch.setattr(gui_handlers.data, 'conectar', lambda: _FakeConn())
     monkeypatch.setattr(
-        gui_handlers.db, 'popular_bd_se_vazio',
+        gui_handlers.data, 'popular_bd_se_vazio',
         lambda _c: chamadas.append('popular_bd'),
     )
     monkeypatch.setattr(
-        gui_handlers.db, 'popular_treinamentos_se_vazio',
+        gui_handlers.data, 'popular_treinamentos_se_vazio',
         lambda _c: chamadas.append('popular_trein'),
     )
 
@@ -126,7 +126,7 @@ def test_executar_fluxo_logs_checkpoints_em_ordem(monkeypatch, caplog):
         def close(self):
             pass
 
-    monkeypatch.setattr(gui_handlers.db, 'conectar', lambda: _FakeConn())
+    monkeypatch.setattr(gui_handlers.data, 'conectar', lambda: _FakeConn())
 
     class _FakeResultado:
         processados = 0
@@ -175,7 +175,7 @@ def test_executar_fluxo_cancela_se_arquivo_nao_selecionado(monkeypatch, iniciar)
 
     spawned = []
     monkeypatch.setattr(
-        gui_handlers.db, 'conectar',
+        gui_handlers.data, 'conectar',
         lambda: spawned.append('NÃO DEVERIA SER CHAMADO') or None,
     )
 

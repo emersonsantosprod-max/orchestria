@@ -16,9 +16,9 @@ from __future__ import annotations
 
 import io
 import logging
+import os
 import sqlite3
 import tempfile
-import os
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, status

@@ -20,7 +20,7 @@ app_path = os.path.join(base_path, "app")
 if app_path not in sys.path:
     sys.path.append(app_path)
 
-from app.infrastructure import db
+from app.infrastructure import data
 from app.infrastructure.logging_config import setup_logging
 from ui.gui_handlers import (
     GuiContext,
@@ -35,10 +35,10 @@ setup_logging()
 
 _logger = logging.getLogger(__name__)
 _logger.info("bootstrap SQLite na main thread (popular_bd_se_vazio + popular_treinamentos_se_vazio)")
-_bootstrap_conn = db.conectar()
+_bootstrap_conn = data.conectar()
 try:
-    db.popular_bd_se_vazio(_bootstrap_conn)
-    db.popular_treinamentos_se_vazio(_bootstrap_conn)
+    data.popular_bd_se_vazio(_bootstrap_conn)
+    data.popular_treinamentos_se_vazio(_bootstrap_conn)
 finally:
     _bootstrap_conn.close()
 _logger.info("bootstrap SQLite concluído; conexão fechada")

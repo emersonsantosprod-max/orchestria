@@ -3,7 +3,7 @@
 import openpyxl
 import pytest
 
-from app.infrastructure import db
+from app.infrastructure import data
 
 
 def _make_base_cobranca_xlsx(tmp_path, rows):
@@ -18,7 +18,7 @@ def _make_base_cobranca_xlsx(tmp_path, rows):
 
 @pytest.fixture
 def conn(tmp_path):
-    c = db.conectar(str(tmp_path / "test.db"))
+    c = data.conectar(str(tmp_path / "test.db"))
     yield c
     c.close()
 
@@ -29,9 +29,9 @@ def test_registrar_cobranca_popula_e_obter_retorna_dict(tmp_path, conn):
         ["ELETRICISTA",      "FÉRIAS S/ DESC"],
         ["AJUDANTE",         "OUTRO"],
     ])
-    db.registrar_cobranca(path, conn)
+    data.registrar_cobranca(path, conn)
 
-    dado = db.obter_cobranca(conn)
+    dado = data.obter_cobranca(conn)
     assert dado == {
         'MECANICO':    'FÉRIAS C/ DESC',
         'ELETRICISTA': 'FÉRIAS S/ DESC',
@@ -41,32 +41,32 @@ def test_registrar_cobranca_popula_e_obter_retorna_dict(tmp_path, conn):
 
 def test_registrar_cobranca_idempotente_substitui(tmp_path, conn):
     p1 = _make_base_cobranca_xlsx(tmp_path, [["A", "X"]])
-    db.registrar_cobranca(p1, conn)
+    data.registrar_cobranca(p1, conn)
     p2 = _make_base_cobranca_xlsx(tmp_path, [["B", "Y"], ["C", "Z"]])
-    db.registrar_cobranca(p2, conn)
-    assert db.obter_cobranca(conn) == {'B': 'Y', 'C': 'Z'}
+    data.registrar_cobranca(p2, conn)
+    assert data.obter_cobranca(conn) == {'B': 'Y', 'C': 'Z'}
 
 
 def test_obter_cobranca_vazio_retorna_dict_vazio(conn):
-    assert db.obter_cobranca(conn) == {}
+    assert data.obter_cobranca(conn) == {}
 
 
 def test_popular_cobranca_se_vazio_no_op_quando_ja_populada(tmp_path, conn):
     path = _make_base_cobranca_xlsx(tmp_path, [["A", "X"]])
-    db.registrar_cobranca(path, conn)
+    data.registrar_cobranca(path, conn)
     other = _make_base_cobranca_xlsx(tmp_path, [["B", "Y"]])
-    assert db.popular_cobranca_se_vazio(conn, other) is False
-    assert db.obter_cobranca(conn) == {'A': 'X'}
+    assert data.popular_cobranca_se_vazio(conn, other) is False
+    assert data.obter_cobranca(conn) == {'A': 'X'}
 
 
 def test_popular_cobranca_se_vazio_no_op_sem_xlsx(conn):
-    assert db.popular_cobranca_se_vazio(conn, None) is False
+    assert data.popular_cobranca_se_vazio(conn, None) is False
 
 
 def test_popular_cobranca_se_vazio_popula_quando_vazia(tmp_path, conn):
     path = _make_base_cobranca_xlsx(tmp_path, [["A", "X"]])
-    assert db.popular_cobranca_se_vazio(conn, path) is True
-    assert db.obter_cobranca(conn) == {'A': 'X'}
+    assert data.popular_cobranca_se_vazio(conn, path) is True
+    assert data.obter_cobranca(conn) == {'A': 'X'}
 
 
 def test_loaders_xlsx_e_sqlite_produzem_mesmo_dict(tmp_path, conn):
@@ -77,6 +77,6 @@ def test_loaders_xlsx_e_sqlite_produzem_mesmo_dict(tmp_path, conn):
         ["ELETRICISTA", "FÉRIAS S/ DESC"],
     ])
     via_xlsx = loaders.carregar_base_cobranca_xlsx(path)
-    db.registrar_cobranca(path, conn)
-    via_sqlite = db.obter_cobranca(conn)
+    data.registrar_cobranca(path, conn)
+    via_sqlite = data.obter_cobranca(conn)
     assert via_xlsx == via_sqlite

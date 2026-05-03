@@ -20,7 +20,7 @@ import os
 import openpyxl
 
 from app.application import pipeline
-from app.infrastructure import db
+from app.infrastructure import data
 
 
 def _criar_medicao_xlsx(caminho: str) -> None:
@@ -91,11 +91,11 @@ def test_ferias_overwrites_treinamento_on_same_cell_via_pipeline(tmp_path):
     _criar_ferias_xlsx(ferias)
     _criar_base_cobranca_xlsx(base_cobranca)
 
-    conn_seed = db.conectar(db_file)
-    db.registrar_base_treinamentos(base_treinamentos, conn_seed)
+    conn_seed = data.conectar(db_file)
+    data.registrar_base_treinamentos(base_treinamentos, conn_seed)
     conn_seed.close()
 
-    conn = db.conectar(db_file)
+    conn = data.conectar(db_file)
     try:
         resultado = pipeline.executar_pipeline(
             caminho_medicao=medicao,
