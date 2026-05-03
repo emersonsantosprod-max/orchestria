@@ -26,5 +26,8 @@ baseline/
 # Claude Code local settings
 .claude/settings.local.json
 
+# Session scratchpads (ephemeral, not committed)
+.claude/sessions/*.tmp
+
 # Design files
 design/

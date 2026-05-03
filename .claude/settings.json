@@ -1,24 +1,62 @@
 {
   "permissions": {
     "allow": [
-      "Bash(python3 -c \"import openpyxl; wb = openpyxl.load_workbook\\('/home/emersonagi/workspace/automacao/data/entrada/Medição Geral Março.xlsx', read_only=True, data_only=True\\); print\\('Sheets:', wb.sheetnames\\); sh = wb['Frequencia']; rows = list\\(sh.iter_rows\\(values_only=True, max_row=3\\)\\); print\\('Row 1:', rows[0]\\); print\\('Row 2:', rows[1]\\); print\\('Row 3:', rows[2]\\); wb.close\\(\\)\")",
-      "Bash(python3 -c \"import openpyxl; wb = openpyxl.load_workbook\\('/home/emersonagi/workspace/automacao/data/entrada/medicao_processada.xlsx', read_only=True, data_only=True\\); print\\('Sheets:', wb.sheetnames\\); sh = wb['Frequencia']; rows = list\\(sh.iter_rows\\(values_only=True, max_row=3\\)\\); print\\('Row 1:', rows[0]\\); print\\('Row 2:', rows[1]\\); print\\('Row 3:', rows[2]\\); wb.close\\(\\)\")",
-      "Bash(python3 validar_consistencia.py)",
-      "Bash(python3 /home/emersonagi/workspace/automacao/validar_consistencia.py)",
-      "Bash(echo \"Exit code: $?\")",
-      "Bash(python -m pytest tests/test_treinamento.py -v)",
-      "Bash(ls /home/emersonagi/workspace/automacao/*.md)",
-      "Bash(python3 -c ' *)",
-      "Bash(wc -l /home/emersonagi/workspace/automacao/app/*.py /home/emersonagi/workspace/automacao/ui/*.py /home/emersonagi/workspace/automacao/tests/*.py)",
-      "Bash(python -m pytest tests/ -x --tb=short)",
-      "Bash(python -m pytest tests/test_ferias.py -q)",
-      "Bash(python -m pytest tests/test_ferias_*.py -v)",
-      "Bash(python -m pytest tests/ -q --tb=short)",
-      "Bash(python -m pytest tests/test_ferias_edge_cases.py::test_ferias_sem_aprovacao -xvs)",
-      "Bash(python -m pytest tests/test_ferias_edge_cases.py::test_md_cobranca_direto_com_observacao tests/test_ferias_rules.py::test_regressao_ferias_direto_com_observacao tests/test_ferias_rules.py::test_regressao_writer_emite_patch_com_observacao tests/test_ferias_rules.py::test_rateio_uma_data_multiplas_linhas_atualizadas -xvs)",
-      "Bash(python -m pytest tests/test_ferias*.py -x)",
-      "Bash(python -m pytest tests/ -x)",
-      "Bash(python -m pytest -q tests/)"
+      "Bash(python -m pytest *)",
+      "Bash(python -m ruff *)",
+      "Bash(python -m app.main *)",
+      "Bash(python -c *)",
+      "Bash(python3 -c *)",
+      "Bash(python3 -m pytest *)",
+      "Bash(python3 -m ruff *)",
+      "Bash(git *)",
+      "Bash(make *)",
+      "Bash(pip *)",
+      "Bash(pip3 *)",
+      "Bash(sqlite3 *)",
+      "Bash(find *)",
+      "Bash(grep *)",
+      "Bash(rg *)",
+      "Bash(ls *)",
+      "Bash(wc *)",
+      "Bash(chmod *)",
+      "Bash(mkdir *)",
+      "Bash(cat *)",
+      "Bash(awk *)",
+      "Bash(npm *)",
+      "Bash(pyinstaller *)",
+      "Bash(bash *)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:api.github.com)",
+      "WebFetch(domain:api.anthropic.com)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/pre-edit-domain.sh"
+          },
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/pre-edit-services.sh"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/post-edit-py.sh"
+          }
+        ]
+      }
     ]
   }
 }

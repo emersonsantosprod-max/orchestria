@@ -5,6 +5,10 @@ paths:
   - "app/excel.py"
   - "app/db.py"
   - "app/paths.py"
+  - "app/infrastructure/loaders.py"
+  - "app/infrastructure/excel.py"
+  - "app/infrastructure/db.py"
+  - "app/infrastructure/paths.py"
 ---
 
 ## Data Loading Rules
