@@ -39,10 +39,6 @@
           {
             "type": "command",
             "command": "bash .claude/hooks/pre-edit-domain.sh"
-          },
-          {
-            "type": "command",
-            "command": "bash .claude/hooks/pre-edit-services.sh"
           }
         ]
       }

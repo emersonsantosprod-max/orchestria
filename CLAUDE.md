@@ -42,6 +42,7 @@ Layer rules: `.claude/rules/boundary.md` | SQLite rules: `.claude/rules/sqlite.m
 
 ## SKILLS & RULES
 
-Skills index: `.claude/skills/INDEX.md`
+Skills (auto via `description`/`paths`): `.claude/skills/` — brainstorming, react, python-testing, repository-pattern, migration-window, strategic-compact
 Rules (sempre carregadas): `.claude/rules/` — boundary, sqlite, testing, coding-standards, data-loading
+Agents (delegáveis): `.claude/agents/` — architect, code-reviewer, tdd-guide
 Sessions: estado vivo em `.claude/sessions/<data>-<topico>.tmp`; `SESSION_STATE.md` aponta para o `.tmp` ativo.
