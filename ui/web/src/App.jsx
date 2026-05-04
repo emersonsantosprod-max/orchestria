@@ -23,11 +23,11 @@ import { useState, useRef, useEffect, useReducer } from 'react';
 // Modules without a route yield a clean RUN_NOT_IMPLEMENTED.
 // ─────────────────────────────────────────────────────────────
 const ENDPOINTS = {
-  treinamentos:   { url: '/api/run/treinamentos',   relatorioField: 'catalogo' },
-  // ferias:       { url: '/api/run/ferias',         relatorioField: 'relatorio' },
-  // atestados:    { url: '/api/run/atestados',      relatorioField: 'relatorio' },
-  // 'validar-hr': { url: '/api/run/validar-hr',     relatorioField: null },
-  // 'validar-dist': { url: '/api/run/validar-dist', relatorioField: null },
+  treinamentos:    { url: '/api/run/treinamentos',  relatorioField: 'catalogo' },
+  ferias:          { url: '/api/run/ferias',        relatorioField: 'relatorio' },
+  atestados:       { url: '/api/run/atestado',      relatorioField: 'relatorio' },
+  'validar-dist':  { url: '/api/run/distribuicao',  relatorioField: null },
+  // 'validar-hr': { url: '/api/run/validar-hr',    relatorioField: null },
 };
 
 async function fetchJSON(url, init) {

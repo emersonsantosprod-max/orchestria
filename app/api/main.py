@@ -19,8 +19,13 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from app.api.routes import config, initial_data, treinamentos
-from app.infrastructure.data import conectar, create_schema
+from app.api.routes import atestado, config, distribuicao, ferias, initial_data, treinamentos
+from app.infrastructure.data import (
+    conectar,
+    create_schema,
+    popular_bd_se_vazio,
+    popular_cobranca_se_vazio,
+)
 from app.infrastructure.logging_config import setup_logging
 
 setup_logging()
@@ -35,6 +40,8 @@ async def lifespan(app: FastAPI):
     conn = conectar()
     try:
         create_schema(conn)
+        popular_bd_se_vazio(conn)
+        popular_cobranca_se_vazio(conn)
         conn.commit()
     finally:
         conn.close()
@@ -51,6 +58,9 @@ app = FastAPI(
 app.include_router(initial_data.router)
 app.include_router(config.router)
 app.include_router(treinamentos.router)
+app.include_router(ferias.router)
+app.include_router(atestado.router)
+app.include_router(distribuicao.router)
 
 
 @app.get("/health")
