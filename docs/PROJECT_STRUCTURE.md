@@ -45,9 +45,9 @@ Imports permitidos: stdlib, `app.domain.*`, `typing.Protocol`. Proibidos: `app.i
 - `app/cli/validar_consist.py` — comparador planilha original × processada.
 - `app/cli/validar_consist_comparar.py`, `app/cli/validar_consist_relatorio.py` — helpers.
 
-### `ui/` — composition root (GUI)
-- `ui/gui.py` — desktop GUI (tkinter). Bootstrap de SQLite na main thread, exatamente uma vez, ANTES de qualquer thread worker. PyInstaller `AutomacaoMedicao.spec`.
-- `ui/gui_handlers.py` — handlers; worker threads abrem suas próprias conexões; `registrar_*` adquire `threading.Lock` da app singleton.
+### `ui/web/` — frontend SPA (servido pelo FastAPI)
+- `ui/web/src/` — código-fonte React/Vite; build em `ui/web/dist/` (gitignored).
+- Backend HTTP: `app/api/main.py` (FastAPI); empacotado pelo `AutomacaoMedicao.spec` com `ui/web/dist/` como assets estáticos.
 
 ### Recursos
 - `assets/distribuicao_contratual_normalizada.xlsx` — SSOT versionado; empacotada via PyInstaller `datas=`; source do bootstrap inicial do SQLite.

@@ -46,4 +46,4 @@ The following adapters were deleted intentionally — code that imported them mu
 - `app/infrastructure/adapters/relatorio_distribuicao.py` (check if reimplemented)
 - `app/infrastructure/adapters/sqlite_tabela_classificacao.py`
 
-Affected files: `app/application/pipeline.py`, `app/cli/`, `ui/gui_handlers.py`, and their tests.
+Affected files: `app/application/pipeline.py`, `app/cli/`, and their tests.

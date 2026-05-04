@@ -1,7 +1,7 @@
 # Automação de Medição — Web UI
 
-React frontend (Vite) for the Automação de Medição tool. Coexists with the
-Tkinter GUI in `ui/gui.py` during the migration window.
+React frontend (Vite) for the Automação de Medição tool. Sole UI surface;
+the legacy Tkinter GUI was removed.
 
 ## Backend integration
 
