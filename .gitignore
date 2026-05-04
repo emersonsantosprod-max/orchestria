@@ -13,6 +13,10 @@ dist/
 
 # Testing cache
 .pytest_cache/
+.ruff_cache/
+
+# Runtime logs
+logs/
 
 # Runtime data — entire directory excluded, no exceptions
 /data/
