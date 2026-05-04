@@ -1,0 +1,4 @@
+2026-05-04 05:46:00,781 INFO app.infrastructure.data.bootstrap:153 registrar_base_treinamentos: lendo /tmp/tmprmhhwy5y.xlsx
+2026-05-04 05:46:00,784 INFO app.infrastructure.data.bootstrap:164 registrar_base_treinamentos: 3 treinamentos extraídos
+2026-05-04 05:46:00,790 INFO httpx:1025 HTTP Request: POST http://testserver/api/config/catalogo "HTTP/1.1 200 OK"
+2026-05-04 05:46:00,794 INFO httpx:1025 HTTP Request: GET http://testserver/api/initial-data "HTTP/1.1 200 OK"

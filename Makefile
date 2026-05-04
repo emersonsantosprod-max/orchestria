@@ -1,6 +1,6 @@
 PYTHON ?= python
 
-.PHONY: install test lint dev build-win
+.PHONY: install test lint dev build-win clean distclean
 
 install:
 	$(PYTHON) -m pip install -e .[dev]
@@ -16,3 +16,10 @@ dev:
 
 build-win:
 	venv_win\Scripts\pyinstaller.exe --clean --noconfirm AutomacaoMedicao.spec
+
+clean:
+	rm -rf .pytest_cache .ruff_cache *.egg-info logs baseline
+	find . -type d -name __pycache__ -not -path './venv*' -not -path './venv_win*' -exec rm -rf {} +
+
+distclean: clean
+	rm -rf build dist
