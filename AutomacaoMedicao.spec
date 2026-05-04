@@ -1,29 +1,26 @@
 # -*- mode: python ; coding: utf-8 -*-
-"""PyInstaller spec — AutomacaoMedicao.
+"""PyInstaller spec — AutomacaoMedicao (FastAPI desktop bundle).
+
+Entrypoint: `app/desktop_entry.py` — sobe uvicorn em 127.0.0.1:8000 e abre
+o navegador padrão na SPA servida via StaticFiles por `app/api/main.py`.
 
 Bundled assets:
-  - `assets/distribuicao_contratual_normalizada.xlsx` é source-of-truth
-    versionado (repo privado) e empacotado via PyInstaller `datas=`.
-  - `assets/base_treinamentos.xlsx` é source-of-truth da tabela de tipos
-    de treinamentos; empacotado via PyInstaller `datas=`.
-  - Se ausentes no build, os bundles são gerados sem eles e os bootstraps
-    idempotentes detectam a ausência em runtime.
+  - `assets/distribuicao_contratual_normalizada.xlsx` — SSOT versionado
+    para bootstrap idempotente da distribuição contratual.
+  - `assets/base_treinamentos.xlsx` — SSOT da base de tipos de treinamento.
+  - `ui/web/dist/` — build do frontend Vite servido como StaticFiles.
+  - Se qualquer um estiver ausente, o build prossegue e o respectivo
+    bootstrap detecta a ausência em runtime.
 """
 
 import os
-from PyInstaller.utils.hooks import collect_all
-
-# collect_all emits a "font_shapes / circle_shapes / rendering quality will be bad"
-# warning during PyInstaller analysis when building from WSL2. This is expected:
-# the build runs via venv_win (a Windows PE32 executable), which calls GDI32
-# AddFontResourceExW with a \\wsl$ UNC path — GDI32 cannot load fonts from network
-# paths at analysis time. At runtime the .exe extracts to %TEMP% (a local path)
-# and font loading succeeds normally. No fonts are missing from the bundle.
-_ctk_datas, _ctk_binaries, _ctk_hiddenimports = collect_all('customtkinter')
+from PyInstaller.utils.hooks import collect_submodules
 
 _DIST_XLSX  = 'assets/distribuicao_contratual_normalizada.xlsx'
 _TRAIN_XLSX = 'assets/base_treinamentos.xlsx'
-_datas = [*_ctk_datas]
+_WEB_DIST   = 'ui/web/dist'
+
+_datas = []
 if os.path.exists(_DIST_XLSX):
     _datas.append((_DIST_XLSX, 'assets'))
 else:
@@ -40,13 +37,28 @@ else:
         "o xlsx de bootstrap. Base de treinamentos deverá ser "
         "importada manualmente em runtime."
     )
+if os.path.isdir(_WEB_DIST):
+    _datas.append((_WEB_DIST, 'ui/web/dist'))
+else:
+    print(
+        f"[spec] AVISO: '{_WEB_DIST}' ausente — rode `npm run build` em "
+        "ui/web/ antes de empacotar para que a SPA seja servida."
+    )
+
+_uvicorn_hidden = collect_submodules('uvicorn')
 
 a = Analysis(
-    ['ui/gui.py'],
+    ['app/desktop_entry.py'],
     pathex=['.'],
-    binaries=[*_ctk_binaries],
+    binaries=[],
     datas=_datas,
-    hiddenimports=['app', 'app.cli', 'app.cli.validar_hr', 'darkdetect', *_ctk_hiddenimports],
+    hiddenimports=[
+        'app',
+        'app.api.main',
+        'app.cli',
+        'app.cli.validar_hr',
+        *_uvicorn_hidden,
+    ],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
@@ -69,7 +81,7 @@ exe = EXE(
     upx=True,
     upx_exclude=[],
     runtime_tmpdir=None,
-    console=False,
+    console=True,
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
