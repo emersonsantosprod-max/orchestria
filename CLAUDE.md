@@ -2,8 +2,8 @@
 
 ## PROJECT
 Python automation for workforce measurement (medição) in petrochemical maintenance.
-Stack: Python, openpyxl, SQLite, PyInstaller. CLI: `python -m app.main`; GUI: `ui/gui.py`.
-Structure: `PROJECT_STRUCTURE.md`.
+Stack: Python, openpyxl, SQLite, PyInstaller. CLI: `python -m app.main`; API: `app/api/main.py`; UI: `ui/web/`.
+Structure: `docs/PROJECT_STRUCTURE.md`.
 
 ## INVARIANTS
 
