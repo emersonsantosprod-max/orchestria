@@ -70,6 +70,18 @@ def _xlsx_medicao_valido() -> bytes:
     return buf.getvalue()
 
 
+def _xlsx_medicao_multi_mes() -> bytes:
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Frequencia"
+    ws.append(["data", "sg funcao", "md cobranca", "% cobrança"])
+    ws.append(["01/01/2026", "ENC", "MEC", 1.0])
+    ws.append(["01/02/2026", "ENC", "MEC", 1.0])
+    buf = io.BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
+
+
 def test_upload_catalogo_popula_e_initial_data_fica_ready(client):
     res = client.post(
         "/api/config/catalogo",
@@ -97,6 +109,25 @@ def test_upload_medicao_popula_e_initial_data_fica_ready(client):
 
     initial = client.get("/api/initial-data").json()
     assert initial["measurement_status"] == "MEASUREMENT_READY"
+    assert initial["mes_referencia"] == "2026-01"
+
+
+def test_initial_data_sem_medicao_tem_mes_referencia_none(client):
+    initial = client.get("/api/initial-data").json()
+    assert initial["measurement_status"] == "MEASUREMENT_MISSING"
+    assert initial["mes_referencia"] is None
+
+
+def test_initial_data_multi_mes_retorna_mes_referencia_none(client):
+    res = client.post(
+        "/api/config/medicao",
+        files={"arquivo": ("medicao.xlsx", _xlsx_medicao_multi_mes())},
+    )
+    assert res.status_code == 200, res.text
+
+    initial = client.get("/api/initial-data").json()
+    assert initial["measurement_status"] == "MEASUREMENT_READY"
+    assert initial["mes_referencia"] is None
 
 
 def test_upload_medicao_xlsx_invalido_retorna_422(client):

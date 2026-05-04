@@ -101,15 +101,20 @@ function reducer(state, ev) {
 // API — real backend (FastAPI in app/api/). Endpoints not yet implemented
 // degrade with RUN_NOT_IMPLEMENTED so the UI stays usable as routes land.
 // ─────────────────────────────────────────────────────────────
+const CONFIG_ENDPOINTS = {
+  base_treinamentos: '/api/config/catalogo',
+};
+
 const API = {
-  // POST /api/session/medicao does not exist yet on the backend. We accept the
-  // file client-side, hold it for the run call, and surface mes_referencia
-  // as null until /api/initial-data or a dedicated endpoint exposes it.
-  loadMedicao(file) {
-    return Promise.resolve({
-      mes_referencia: null,
+  async loadMedicao(file) {
+    const fd = new FormData();
+    fd.append('arquivo', file);
+    await fetchJSON('/api/config/medicao', { method: 'POST', body: fd });
+    const initial = await fetchJSON('/api/initial-data');
+    return {
+      mes_referencia: initial.mes_referencia,
       medicao: { name: file.name, size: file.size },
-    });
+    };
   },
   initialData() { return fetchJSON('/api/initial-data'); },
 
@@ -131,10 +136,16 @@ const API = {
     return fetchJSON(cfg.url, { method: 'POST', body: fd });
   },
 
-  saveConfig(key, _file) {
-    const err = new Error(`POST /api/config/${key} ainda não implementado no backend.`);
-    err.code = 'CONFIG_NOT_IMPLEMENTED';
-    return Promise.reject(err);
+  async saveConfig(key, file) {
+    const url = CONFIG_ENDPOINTS[key];
+    if (!url) {
+      const err = new Error(`POST /api/config/${key} ainda não implementado no backend.`);
+      err.code = 'CONFIG_NOT_IMPLEMENTED';
+      throw err;
+    }
+    const fd = new FormData();
+    fd.append('arquivo', file);
+    return fetchJSON(url, { method: 'POST', body: fd });
   },
 };
 

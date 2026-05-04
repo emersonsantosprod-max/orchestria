@@ -33,3 +33,17 @@ class MedicaoRepository:
         return self._conn.execute(
             "SELECT COUNT(*) FROM medicao_frequencia"
         ).fetchone()[0]
+
+    def mes_referencia(self) -> str | None:
+        """YYYY-MM se todas as datas pertencem ao mesmo mês; None caso contrário.
+
+        `data` é persistido em `dd/mm/aaaa` (ver core.normalizar_data).
+        """
+        rows = self._conn.execute(
+            "SELECT DISTINCT substr(data, 7, 4) || '-' || substr(data, 4, 2) AS mes "
+            "FROM medicao_frequencia "
+            "WHERE data IS NOT NULL AND length(data) = 10"
+        ).fetchall()
+        if len(rows) != 1:
+            return None
+        return rows[0]["mes"]

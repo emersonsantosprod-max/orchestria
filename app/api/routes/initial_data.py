@@ -28,7 +28,11 @@ from app.api.schemas.initial_data import (
     MeasurementStatus,
     ReportStatus,
 )
-from app.infrastructure.data import RegistryRepository, TreinamentosRepository
+from app.infrastructure.data import (
+    MedicaoRepository,
+    RegistryRepository,
+    TreinamentosRepository,
+)
 
 router = APIRouter()
 
@@ -61,8 +65,15 @@ def get_initial_data(conn: sqlite3.Connection = Depends(get_conn)) -> InitialDat
         else ReportStatus.MISSING
     )
 
+    mes_referencia = (
+        MedicaoRepository(conn).mes_referencia()
+        if measurement_status == MeasurementStatus.READY
+        else None
+    )
+
     return InitialDataResponse(
         catalog_status=catalog_status,
         measurement_status=measurement_status,
         report_status=report_status,
+        mes_referencia=mes_referencia,
     )

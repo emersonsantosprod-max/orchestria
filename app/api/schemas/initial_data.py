@@ -26,3 +26,4 @@ class InitialDataResponse(BaseModel):
     catalog_status: CatalogStatus
     measurement_status: MeasurementStatus
     report_status: ReportStatus
+    mes_referencia: str | None = None
