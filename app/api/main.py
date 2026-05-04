@@ -19,7 +19,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from app.api.routes import initial_data, treinamentos
+from app.api.routes import config, initial_data, treinamentos
 from app.infrastructure.data import conectar, create_schema
 from app.infrastructure.logging_config import setup_logging
 
@@ -49,6 +49,7 @@ app = FastAPI(
 )
 
 app.include_router(initial_data.router)
+app.include_router(config.router)
 app.include_router(treinamentos.router)
 
 
