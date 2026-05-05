@@ -45,7 +45,9 @@ else:
         "ui/web/ antes de empacotar para que a SPA seja servida."
     )
 
-_uvicorn_hidden = collect_submodules('uvicorn')
+_uvicorn_hidden  = collect_submodules('uvicorn')
+_openpyxl_hidden = collect_submodules('openpyxl')
+_fastapi_hidden  = collect_submodules('fastapi')
 
 a = Analysis(
     ['app/desktop_entry.py'],
@@ -57,7 +59,10 @@ a = Analysis(
         'app.api.main',
         'app.cli',
         'app.cli.validar_hr',
+        'sqlite3',
         *_uvicorn_hidden,
+        *_openpyxl_hidden,
+        *_fastapi_hidden,
     ],
     hookspath=[],
     hooksconfig={},
