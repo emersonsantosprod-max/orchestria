@@ -6,6 +6,7 @@ import sys
 
 from app.cli.validar_consist_comparar import comparar_arquivos
 from app.cli.validar_consist_relatorio import SEP_SECAO, imprimir_relatorio
+from app.domain.errors import AutomacaoError
 from app.infrastructure.paths import _project_root
 
 _BASE_DIR = str(_project_root())
@@ -28,8 +29,10 @@ def main():
 
     try:
         resultado = comparar_arquivos(ARQUIVO_ORIGINAL, ARQUIVO_PROCESSADO)
-    except Exception as e:
-        print(f"[ERRO INESPERADO] {e}")
+    except (AutomacaoError, ValueError, OSError) as e:
+        print(f"[ERRO] {e}", file=sys.stderr)
+        sys.exit(1)
+    except Exception:
         import traceback
         traceback.print_exc()
         sys.exit(1)
