@@ -55,3 +55,9 @@ def bundled_treinamentos_xlsx() -> Path:
     if getattr(sys, 'frozen', False):
         return _bundle_root() / 'assets' / 'base_treinamentos.xlsx'
     return _project_root() / 'assets' / 'base_treinamentos.xlsx'
+
+
+def ui_dist_dir() -> Path:
+    if getattr(sys, 'frozen', False):
+        return _bundle_root() / 'ui' / 'web' / 'dist'
+    return _project_root() / 'ui' / 'web' / 'dist'

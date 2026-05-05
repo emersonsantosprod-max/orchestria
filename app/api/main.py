@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import logging
 from contextlib import asynccontextmanager
-from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
@@ -27,11 +26,12 @@ from app.infrastructure.data import (
     popular_cobranca_se_vazio,
 )
 from app.infrastructure.logging_config import setup_logging
+from app.infrastructure.paths import ui_dist_dir
 
 setup_logging()
 logger = logging.getLogger(__name__)
 
-_UI_DIST = Path(__file__).resolve().parents[2] / "ui" / "web" / "dist"
+_UI_DIST = ui_dist_dir()
 
 
 @asynccontextmanager
