@@ -8,9 +8,10 @@ import sys
 from pathlib import Path
 
 from app.infrastructure.loaders import carregar_medicao_hr
+from app.infrastructure.paths import _project_root
 from app.validar_horas import _salvar_relatorio, gerar_relatorio, validar_horas_trabalhadas
 
-DEFAULT_MEDICAO = 'data/entrada/medicao_base.xlsx'
+DEFAULT_MEDICAO = str(_project_root() / 'data' / 'entrada' / 'medicao_base.xlsx')
 
 
 def cmd_validar(path: Path) -> int:
