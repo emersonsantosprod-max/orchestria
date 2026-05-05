@@ -142,3 +142,56 @@ def test_upload_medicao_xlsx_invalido_retorna_422(client):
 def test_upload_sem_arquivo_retorna_422(client):
     res = client.post("/api/config/catalogo")
     assert res.status_code == 422
+
+
+def _xlsx_cobranca_valido() -> bytes:
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.append(["ENC", "MEC"])
+    ws.append(["AUX", "FÉRIAS S/ DESC"])
+    buf = io.BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
+
+
+def _xlsx_distribuicao_valido() -> bytes:
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.append(["funcao", "md_cobranca", "area", "quantidade"])
+    ws.append(["ENC MEC", "MEC", "A1", 3])
+    ws.append(["AUX MEC", "MEC", "A2", 2])
+    buf = io.BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
+
+
+def test_upload_cobranca_popula_regras_pagamento_ferias(client):
+    res = client.post(
+        "/api/config/cobranca",
+        files={"arquivo": ("base_cobranca.xlsx", _xlsx_cobranca_valido())},
+    )
+    assert res.status_code == 200, res.text
+    body = res.json()
+    assert body["count"] == 2
+    assert body["arquivo"] == "base_cobranca.xlsx"
+
+
+def test_upload_distribuicao_popula_bd_distribuicao(client):
+    res = client.post(
+        "/api/config/distribuicao",
+        files={"arquivo": ("bd_distribuicao.xlsx", _xlsx_distribuicao_valido())},
+    )
+    assert res.status_code == 200, res.text
+    body = res.json()
+    assert body["count"] == 2
+    assert body["arquivo"] == "bd_distribuicao.xlsx"
+
+
+def test_upload_cobranca_sem_arquivo_retorna_422(client):
+    res = client.post("/api/config/cobranca")
+    assert res.status_code == 422
+
+
+def test_upload_distribuicao_sem_arquivo_retorna_422(client):
+    res = client.post("/api/config/distribuicao")
+    assert res.status_code == 422

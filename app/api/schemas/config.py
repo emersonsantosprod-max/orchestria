@@ -14,3 +14,13 @@ class MedicaoUploadResponse(BaseModel):
     count: int
     arquivo: str
     avisos: list[str]
+
+
+class CobrancaUploadResponse(BaseModel):
+    count: int
+    arquivo: str
+
+
+class DistribuicaoUploadResponse(BaseModel):
+    count: int
+    arquivo: str

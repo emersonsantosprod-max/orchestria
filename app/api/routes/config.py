@@ -15,11 +15,20 @@ import tempfile
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
 
 from app.api.dependencies import get_conn
-from app.api.schemas.config import CatalogoUploadResponse, MedicaoUploadResponse
+from app.api.schemas.config import (
+    CatalogoUploadResponse,
+    CobrancaUploadResponse,
+    DistribuicaoUploadResponse,
+    MedicaoUploadResponse,
+)
 from app.infrastructure.data import (
+    DistribuicaoRepository,
+    FeriasRepository,
     MedicaoRepository,
     TreinamentosRepository,
     registrar_base_treinamentos,
+    registrar_bd,
+    registrar_cobranca,
     registrar_medicao,
 )
 
@@ -100,3 +109,67 @@ async def upload_medicao(
         arquivo=arquivo.filename or "",
         avisos=avisos,
     )
+
+
+@router.post(
+    "/api/config/cobranca",
+    response_model=CobrancaUploadResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def upload_cobranca(
+    arquivo: UploadFile,
+    conn: sqlite3.Connection = Depends(get_conn),
+) -> CobrancaUploadResponse:
+    tmp_path: str | None = None
+    try:
+        tmp_path = await _persistir_em_tmp(arquivo)
+        registrar_cobranca(tmp_path, conn)
+        count = FeriasRepository(conn).count()
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+    except Exception as exc:
+        logger.exception("upload_cobranca: falha ao registrar base de cobrança")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(exc),
+        ) from exc
+    finally:
+        if tmp_path and os.path.exists(tmp_path):
+            os.remove(tmp_path)
+
+    return CobrancaUploadResponse(count=count, arquivo=arquivo.filename or "")
+
+
+@router.post(
+    "/api/config/distribuicao",
+    response_model=DistribuicaoUploadResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def upload_distribuicao(
+    arquivo: UploadFile,
+    conn: sqlite3.Connection = Depends(get_conn),
+) -> DistribuicaoUploadResponse:
+    tmp_path: str | None = None
+    try:
+        tmp_path = await _persistir_em_tmp(arquivo)
+        registrar_bd(tmp_path, conn)
+        count = DistribuicaoRepository(conn).count()
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+    except Exception as exc:
+        logger.exception("upload_distribuicao: falha ao registrar bd_distribuicao")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(exc),
+        ) from exc
+    finally:
+        if tmp_path and os.path.exists(tmp_path):
+            os.remove(tmp_path)
+
+    return DistribuicaoUploadResponse(count=count, arquivo=arquivo.filename or "")
