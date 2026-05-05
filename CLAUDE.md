@@ -19,7 +19,7 @@ Structure: `docs/PROJECT_STRUCTURE.md`.
 - `Inconsistencia`: construir via `core.inconsistencia(origem, ...)` — nunca instanciar diretamente.
 - `Update`/`Inconsistencia`: dataclasses puras — acesso por atributo, nunca `.get()`/`[key]`/`in`.
 - `gerar_updates_treinamento(dados, tabela_classificacao, observacoes_existentes=None)` → `(list[Update], list[Inconsistencia])`.
-- `gerar_updates_ferias(dados, base_cobranca, medicao_por_matricula, md_cobranca_por_chave, sg_funcao_por_chave, mes_referencia, col_map)` → `(list[Update], list[Inconsistencia])`.
+- `gerar_updates_ferias(dados_ferias, base_cobranca, medicao_por_matricula, md_cobranca_por_chave, sg_funcao_por_chave, mes_referencia, col_map)` → `(list[Update], list[Inconsistencia])`.
 - `gerar_updates_atestado(dados)` → `(list[Update], list[Inconsistencia])`.
 - `pipeline.executar_pipeline(..., conn=None, validar_distribuicao=False)`: `validar_distribuicao=True` exige `conn`.
 - `app.paths.db_path()` resolve o caminho do SQLite — nunca `Path('data/automacao.db')`.
