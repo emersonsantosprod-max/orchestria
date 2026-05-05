@@ -155,7 +155,7 @@ def gerar_relatorio(
     return '\n'.join(lines)
 
 
-def _salvar_relatorio(conteudo: str) -> Path:
+def salvar_relatorio(conteudo: str) -> Path:
     destino = saida_dir()
     destino.mkdir(parents=True, exist_ok=True)
     ts = datetime.now().strftime('%Y%m%d_%H%M%S')
