@@ -29,7 +29,7 @@ Erros detectados:
 import re
 from datetime import date, timedelta
 
-from app.domain.core import Update, inconsistencia, normalizar_matricula
+from app.domain.core import Inconsistencia, Update, inconsistencia, normalizar_matricula
 
 _RE_PERIODO = re.compile(
     r'(\d{2})/(\d{2})/(\d{4})\s*a\s*(\d{2})/(\d{2})/(\d{4})$'
@@ -95,7 +95,7 @@ def gerar_updates_ferias(
     sg_funcao_por_chave,
     mes_referencia,
     col_map,
-):
+) -> tuple[list[Update], list[Inconsistencia]]:
     """
     Retorna (atualizacoes, inconsistencias).
 

@@ -25,6 +25,7 @@ from collections import defaultdict
 
 from app.domain.core import (
     LIMITE_HORAS_TRABALHADAS,
+    Inconsistencia,
     Update,
     deduplicar_observacao,
     inconsistencia,
@@ -127,7 +128,7 @@ def gerar_updates_treinamento(
     dados: list,
     tabela_classificacao: dict,
     observacoes_existentes: dict = None,
-) -> tuple:
+) -> tuple[list[Update], list[Inconsistencia]]:
     """
     Retorna (atualizacoes, inconsistencias).
 

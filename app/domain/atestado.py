@@ -13,10 +13,10 @@ from __future__ import annotations
 
 from datetime import timedelta
 
-from app.domain.core import Update, normalizar_matricula, parse_data_obj
+from app.domain.core import Inconsistencia, Update, normalizar_matricula, parse_data_obj
 
 
-def gerar_updates_atestado(dados: list) -> tuple:
+def gerar_updates_atestado(dados: list) -> tuple[list[Update], list[Inconsistencia]]:
     """
     Expande períodos de atestado em registros diários.
 
