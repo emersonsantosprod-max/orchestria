@@ -15,6 +15,7 @@ from fastapi import APIRouter, HTTPException, UploadFile, status
 
 from app.api.schemas.execution import ExecutionResult, InconsistenciaOut
 from app.application.pipeline import executar_pipeline
+from app.domain.errors import AutomacaoError
 from app.infrastructure.paths import saida_dir
 
 logger = logging.getLogger(__name__)
@@ -52,12 +53,20 @@ async def run_atestado(
             caminho_saida=caminho_saida,
         )
 
-    except Exception as exc:
+    except HTTPException:
+        raise
+    except AutomacaoError as exc:
+        logger.warning("run_atestado: erro de domínio: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+    except Exception:
         logger.exception("run_atestado: falha no pipeline")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(exc),
-        ) from exc
+            detail="Erro interno inesperado",
+        ) from None
     finally:
         if tmp_medicao and os.path.exists(tmp_medicao):
             os.remove(tmp_medicao)

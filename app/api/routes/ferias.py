@@ -18,6 +18,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
 from app.api.dependencies import get_conn
 from app.api.schemas.execution import ExecutionResult, InconsistenciaOut
 from app.application.pipeline import executar_pipeline
+from app.domain.errors import AutomacaoError
 from app.infrastructure import data
 from app.infrastructure.paths import saida_dir
 
@@ -66,12 +67,18 @@ async def run_ferias(
 
     except HTTPException:
         raise
-    except Exception as exc:
+    except AutomacaoError as exc:
+        logger.warning("run_ferias: erro de domínio: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+    except Exception:
         logger.exception("run_ferias: falha no pipeline")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(exc),
-        ) from exc
+            detail="Erro interno inesperado",
+        ) from None
     finally:
         if tmp_medicao and os.path.exists(tmp_medicao):
             os.remove(tmp_medicao)
