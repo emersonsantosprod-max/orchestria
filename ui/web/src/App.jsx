@@ -559,6 +559,9 @@ function ConfigRow({ cfg, value, dispatch, blocked }) {
     API.saveConfig(cfg.key, f).then(() => {
       dispatch({ type: 'CONFIG_SAVED', key: cfg.key, file: { name: f.name } });
       dispatch({ type: 'LOG', entry: { ts: new Date().toISOString(), level: 'ok', source: `config/${cfg.key}`, msg: `Salvo: ${f.name}` } });
+    }).catch(err => {
+      dispatch({ type: 'API_ERROR', error: { code: err.code || 'CONFIG_FAILED', message: err.message || 'Falha ao salvar configuração' } });
+      dispatch({ type: 'LOG', entry: { ts: new Date().toISOString(), level: 'err', source: `config/${cfg.key}`, msg: err.message || 'Falha ao salvar configuração' } });
     }).finally(() => setSaving(false));
   }
   return (
