@@ -15,7 +15,7 @@ dev:
 	$(PYTHON) -m app.main
 
 build-win:
-	venv_win\Scripts\pyinstaller.exe --clean --noconfirm AutomacaoMedicao.spec
+	./venv_win/Scripts/pyinstaller.exe --clean --noconfirm AutomacaoMedicao.spec
 
 clean:
 	rm -rf .pytest_cache .ruff_cache *.egg-info logs baseline
