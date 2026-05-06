@@ -118,6 +118,32 @@ def test_initial_data_sem_medicao_tem_mes_referencia_none(client):
     assert initial["mes_referencia"] is None
 
 
+def test_initial_data_expoe_modules_config_e_tables(client):
+    initial = client.get("/api/initial-data").json()
+
+    assert set(initial["modules"]) == {
+        "treinamentos", "ferias", "atestados", "validar-hr", "validar-dist",
+    }
+    for m in initial["modules"].values():
+        assert isinstance(m["enabled"], bool)
+        assert "reason" in m
+
+    assert set(initial["config"]) == {
+        "base_cobranca", "base_treinamentos", "bd_distribuicao",
+    }
+    assert initial["config"]["base_cobranca"]["ready"] is False
+
+    assert set(initial["tables"]) == {
+        "medicao_frequencia", "catalogo_treinamentos", "bd_distribuicao",
+    }
+    for present in initial["tables"].values():
+        assert isinstance(present, bool)
+
+    for mid in ("ferias", "atestados", "validar-hr", "validar-dist"):
+        assert initial["modules"][mid]["enabled"] is False
+        assert initial["modules"][mid]["reason"]
+
+
 def test_initial_data_multi_mes_retorna_mes_referencia_none(client):
     res = client.post(
         "/api/config/medicao",

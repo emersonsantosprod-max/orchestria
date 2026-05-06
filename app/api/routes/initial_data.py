@@ -13,6 +13,18 @@ Lógica de derivação (espelho do flowchart Mermaid):
   report_status:
     READY   → CATALOG_READY AND MEASUREMENT_READY
     MISSING → qualquer um dos dois ausente
+
+  modules:
+    Por id (treinamentos, ferias, atestados, validar-hr, validar-dist) — cada um
+    expõe enabled/reason derivados das tabelas reais para guiar o gating de UI.
+
+  config:
+    base_treinamentos / bd_distribuicao — refletem dados persistidos em SQLite.
+    base_cobranca permanece efêmero (não persistido) → ready=false.
+
+  tables:
+    Presença bruta de medicao_frequencia, catalogo_treinamentos, bd_distribuicao
+    em sqlite_master — usado pelo log de bootstrap da UI.
 """
 
 from __future__ import annotations
@@ -24,11 +36,14 @@ from fastapi import APIRouter, Depends
 from app.api.dependencies import get_conn
 from app.api.schemas.initial_data import (
     CatalogStatus,
+    ConfigStatus,
     InitialDataResponse,
     MeasurementStatus,
+    ModuleStatus,
     ReportStatus,
 )
 from app.infrastructure.data import (
+    DistribuicaoRepository,
     MedicaoRepository,
     RegistryRepository,
     TreinamentosRepository,
@@ -37,43 +52,88 @@ from app.infrastructure.data import (
 router = APIRouter()
 
 
+_TRACKED_TABLES = ("medicao_frequencia", "catalogo_treinamentos", "bd_distribuicao")
+
+
+def _tabelas_presentes(conn: sqlite3.Connection) -> dict[str, bool]:
+    rows = conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='table'"
+    ).fetchall()
+    presentes = {r[0] for r in rows}
+    return {t: t in presentes for t in _TRACKED_TABLES}
+
+
 @router.get("/api/initial-data", response_model=InitialDataResponse)
 def get_initial_data(conn: sqlite3.Connection = Depends(get_conn)) -> InitialDataResponse:
     treinamentos = TreinamentosRepository(conn)
     registry = RegistryRepository(conn)
 
-    # catalog_status
-    catalog_status = (
-        CatalogStatus.READY
-        if treinamentos.count() > 0
-        else CatalogStatus.MISSING
-    )
+    catalog_ready = treinamentos.count() > 0
+    catalog_status = CatalogStatus.READY if catalog_ready else CatalogStatus.MISSING
 
-    # measurement_status
     medicao_reg = registry.get("medicao")
+    measurement_ready = medicao_reg is not None
     measurement_status = (
-        MeasurementStatus.READY
-        if medicao_reg is not None
-        else MeasurementStatus.MISSING
+        MeasurementStatus.READY if measurement_ready else MeasurementStatus.MISSING
     )
 
-    # report_status — ambos precisam estar prontos
     report_status = (
         ReportStatus.READY
-        if catalog_status == CatalogStatus.READY
-        and measurement_status == MeasurementStatus.READY
+        if catalog_ready and measurement_ready
         else ReportStatus.MISSING
     )
 
     mes_referencia = (
-        MedicaoRepository(conn).mes_referencia()
-        if measurement_status == MeasurementStatus.READY
-        else None
+        MedicaoRepository(conn).mes_referencia() if measurement_ready else None
     )
+
+    distribuicao_ready = DistribuicaoRepository(conn).count() > 0
+
+    def _module(enabled: bool, reason: str | None) -> ModuleStatus:
+        return ModuleStatus(enabled=enabled, reason=None if enabled else reason)
+
+    sem_medicao = "Carregue a medição para liberar este módulo."
+    modules = {
+        "treinamentos": _module(
+            catalog_ready and measurement_ready,
+            "Importe a base de treinamentos em Configuração."
+            if not catalog_ready
+            else sem_medicao,
+        ),
+        "ferias": _module(measurement_ready, sem_medicao),
+        "atestados": _module(measurement_ready, sem_medicao),
+        "validar-hr": _module(measurement_ready, sem_medicao),
+        "validar-dist": _module(
+            measurement_ready and distribuicao_ready,
+            "BD Distribuição não carregado."
+            if not distribuicao_ready
+            else sem_medicao,
+        ),
+    }
+
+    bd_reg = registry.get("bd")
+    base_tre_reg = registry.get("base_treinamentos")
+
+    config = {
+        "base_cobranca": ConfigStatus(ready=False, name=None, saved_at=None),
+        "base_treinamentos": ConfigStatus(
+            ready=catalog_ready,
+            name=base_tre_reg["caminho"] if base_tre_reg else None,
+            saved_at=base_tre_reg["importado_em"] if base_tre_reg else None,
+        ),
+        "bd_distribuicao": ConfigStatus(
+            ready=distribuicao_ready,
+            name=bd_reg["caminho"] if bd_reg else None,
+            saved_at=bd_reg["importado_em"] if bd_reg else None,
+        ),
+    }
 
     return InitialDataResponse(
         catalog_status=catalog_status,
         measurement_status=measurement_status,
         report_status=report_status,
         mes_referencia=mes_referencia,
+        modules=modules,
+        config=config,
+        tables=_tabelas_presentes(conn),
     )

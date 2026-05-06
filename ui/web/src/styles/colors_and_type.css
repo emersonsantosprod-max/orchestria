@@ -156,6 +156,7 @@ html, body, #root { height: 100%; margin: 0; }
 body { background: #fff; }
 @keyframes msvspin  { to { transform: rotate(360deg); } }
 @keyframes msvpulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+@keyframes msvshimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 button:focus-visible { outline: none; box-shadow: var(--shadow-focus); border-radius: 4px; }
 *::-webkit-scrollbar { width: 10px; height: 10px; }
 *::-webkit-scrollbar-thumb       { background: rgba(0, 0, 0, 0.16); border-radius: 4px; }

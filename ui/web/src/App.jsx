@@ -44,6 +44,8 @@ async function fetchJSON(url, init) {
 // STATE MODEL
 // ─────────────────────────────────────────────────────────────
 const initialState = {
+  bootstrapping: true,
+  bootstrapStep: 'session',  // 'session' | 'config' | 'modules' | 'done'
   session: { active: false, mes_referencia: null, medicao: null, loadedAt: null },
   run: { lock: false, action: null, startedAt: null },
   modules: {
@@ -53,6 +55,7 @@ const initialState = {
     'validar-hr':  {},
     'validar-dist':{},
   },
+  modulesMeta: {},  // { [id]: { enabled, reason } } — backend gating, source of truth
   config: {},
   logs: [],
   apiError: null,
@@ -60,6 +63,17 @@ const initialState = {
 
 function reducer(state, ev) {
   switch (ev.type) {
+    case 'BOOTSTRAP_STEP':
+      return { ...state, bootstrapStep: ev.step };
+    case 'BOOTSTRAP_DONE':
+      return {
+        ...state,
+        bootstrapping: false,
+        bootstrapStep: 'done',
+        session: ev.session ?? state.session,
+        modulesMeta: ev.modulesMeta ?? state.modulesMeta,
+        config: ev.config ?? state.config,
+      };
     case 'SESSION_LOADED':
       return { ...state, session: { active: true, mes_referencia: ev.mes, medicao: ev.medicao, loadedAt: new Date().toISOString() }, apiError: null };
     case 'SESSION_CLEARED':
@@ -234,7 +248,47 @@ export default function App() {
   const relatorioFilesRef = useRef({});
   useLogStream(dispatch, state.run);
 
-  const blocked = state.run.lock;
+  // Bootstrap — phased reveal while we probe DB state via /api/initial-data.
+  useEffect(() => {
+    let cancelled = false;
+    const log = (level, msg) => dispatch({
+      type: 'LOG',
+      entry: { ts: new Date().toISOString(), level, source: 'bootstrap', msg },
+    });
+    log('info', 'Verificando estado persistido no servidor…');
+    const t1 = setTimeout(() => {
+      if (cancelled) return;
+      dispatch({ type: 'BOOTSTRAP_STEP', step: 'config' });
+      log('info', 'Verificando bases persistidas (config)…');
+    }, 450);
+    const t2 = setTimeout(() => {
+      if (cancelled) return;
+      dispatch({ type: 'BOOTSTRAP_STEP', step: 'modules' });
+      log('info', 'Verificando módulos disponíveis…');
+    }, 850);
+    API.initialData().then(res => {
+      if (cancelled) return;
+      const session = res.measurement_status === 'MEASUREMENT_READY'
+        ? { active: true, mes_referencia: res.mes_referencia, medicao: { name: 'medição registrada', size: 0 }, loadedAt: new Date().toISOString() }
+        : initialState.session;
+      const cfg = {};
+      Object.entries(res.config || {}).forEach(([k, v]) => {
+        if (v.ready) cfg[k] = { name: v.name, savedAt: v.saved_at };
+      });
+      Object.entries(res.tables || {}).forEach(([t, present]) => {
+        log(present ? 'ok' : 'warn', `tabela ${t}: ${present ? 'presente' : 'ausente'}`);
+      });
+      dispatch({ type: 'BOOTSTRAP_DONE', session, modulesMeta: res.modules || {}, config: cfg });
+      log('ok', 'Estado restaurado do servidor');
+    }).catch(err => {
+      if (cancelled) return;
+      log('error', `Falha no bootstrap: ${err.message || err.code || 'erro'}`);
+      dispatch({ type: 'BOOTSTRAP_DONE' });
+    });
+    return () => { cancelled = true; clearTimeout(t1); clearTimeout(t2); };
+  }, []);
+
+  const blocked = state.run.lock || state.bootstrapping;
   const fileRefs = { medicao: medicaoFileRef, relatorios: relatorioFilesRef };
 
   return (
@@ -245,13 +299,13 @@ export default function App() {
       height: '100vh', background: 'var(--bg-subtle)',
       fontFamily: 'var(--font-sans)', color: 'var(--fg)',
     }}>
-      <Sidebar view={view} setView={setView} session={state.session} blocked={blocked} />
+      <Sidebar view={view} setView={setView} session={state.session} blocked={blocked} bootstrapping={state.bootstrapping} />
       <Main view={view} state={state} dispatch={dispatch} blocked={blocked} fileRefs={fileRefs} />
     </div>
   );
 }
 
-function Sidebar({ view, setView, session, blocked }) {
+function Sidebar({ view, setView, session, blocked, bootstrapping }) {
   const items = [
     { id: 'execucao', label: 'Execução',     desc: 'Sessão e módulos' },
     { id: 'config',   label: 'Configuração', desc: 'Bases persistidas' },
@@ -302,7 +356,12 @@ function Sidebar({ view, setView, session, blocked }) {
         <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', color: '#7a7a7a', textTransform: 'uppercase', marginBottom: 6 }}>
           Sessão
         </div>
-        {session.active ? (
+        {bootstrapping ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#9a9a9a' }}>
+            <Spinner color="#bdbdbd" />
+            Verificando…
+          </div>
+        ) : session.active ? (
           <>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#9be1b3' }}>
               <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#22c55e' }} />
@@ -342,18 +401,26 @@ function Main({ view, state, dispatch, blocked, fileRefs }) {
 }
 
 function ExecucaoView({ state, dispatch, blocked, fileRefs }) {
+  const boot = state.bootstrapping;
   return (
     <div style={{ padding: '28px 32px 48px', maxWidth: 920 }}>
       <Header title="Execução" subtitle="Carregue a medição do mês e execute os módulos de lançamento." />
       {state.apiError && (
         <ApiErrorBanner err={state.apiError} onDismiss={() => dispatch({ type: 'API_ERROR', error: null })} />
       )}
-      <SessionBlock state={state} dispatch={dispatch} blocked={blocked} fileRefs={fileRefs} />
-      <SectionTitle>Módulos</SectionTitle>
+      {boot
+        ? <SessionBlockSkeleton step={state.bootstrapStep} />
+        : <SessionBlock state={state} dispatch={dispatch} blocked={blocked} fileRefs={fileRefs} />}
+      <SectionTitle>
+        Módulos
+        {boot && <BootDot active={state.bootstrapStep === 'modules'} done={false} />}
+      </SectionTitle>
       <div style={{ display: 'grid', gap: 10 }}>
-        {MODULES.map(m => (
-          <ModuleRow key={m.id} module={m} state={state} dispatch={dispatch} blocked={blocked} fileRefs={fileRefs} />
-        ))}
+        {boot
+          ? MODULES.map((m, i) => <ModuleRowSkeleton key={m.id} index={i} step={state.bootstrapStep} />)
+          : MODULES.map(m => (
+              <ModuleRow key={m.id} module={m} state={state} dispatch={dispatch} blocked={blocked} fileRefs={fileRefs} />
+            ))}
       </div>
     </div>
   );
@@ -437,10 +504,12 @@ function ModuleRow({ module, state, dispatch, blocked, fileRefs }) {
   const canRun = !blocked && !sessionOff && relReady && sqliteReady;
   const running = state.run.action === module.id;
 
+  const meta = state.modulesMeta?.[module.id];
   let reason = null;
   if (sessionOff) reason = 'Carregue a medição para liberar este módulo.';
   else if (!relReady) reason = 'Selecione o relatório do módulo.';
   else if (!sqliteReady) reason = 'Configure bd_distribuicao em Configuração.';
+  else if (meta && !meta.enabled && meta.reason) reason = meta.reason;
 
   const fileRef = useRef(null);
   function pickRel() { if (!sessionOff && !blocked) fileRef.current?.click(); }
@@ -530,6 +599,7 @@ function ModuleRow({ module, state, dispatch, blocked, fileRefs }) {
 }
 
 function ConfigView({ state, dispatch, blocked }) {
+  const boot = state.bootstrapping;
   return (
     <div style={{ padding: '28px 32px 48px', maxWidth: 920 }}>
       <Header title="Configuração" subtitle="Bases persistidas pelo backend. Independem da sessão de medição." />
@@ -537,9 +607,11 @@ function ConfigView({ state, dispatch, blocked }) {
         <ApiErrorBanner err={state.apiError} onDismiss={() => dispatch({ type: 'API_ERROR', error: null })} />
       )}
       <div style={{ display: 'grid', gap: 10 }}>
-        {CONFIG_KEYS.map(c => (
-          <ConfigRow key={c.key} cfg={c} value={state.config[c.key]} dispatch={dispatch} blocked={blocked} />
-        ))}
+        {boot
+          ? CONFIG_KEYS.map((c, i) => <ConfigRowSkeleton key={c.key} index={i} step={state.bootstrapStep} />)
+          : CONFIG_KEYS.map(c => (
+              <ConfigRow key={c.key} cfg={c} value={state.config[c.key]} dispatch={dispatch} blocked={blocked} />
+            ))}
       </div>
       <div style={{ marginTop: 24, fontSize: 12, color: 'var(--fg-muted)' }}>
         Os arquivos enviados aqui são gravados no servidor e ficam disponíveis para os módulos de execução. Não dependem da medição ativa.
@@ -746,6 +818,147 @@ function Button({ kind = 'primary', children, disabled, running, onClick }) {
       {running && <Spinner color={kind === 'primary' ? '#fff' : 'var(--fg)'} />}
       {running ? 'Executando…' : children}
     </button>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// BOOTSTRAP SKELETONS — phased reveal: session → config → modules.
+// Each row passes pending → checking → done as bootstrapStep advances.
+// ─────────────────────────────────────────────────────────────
+function bootPhase(targetStep, currentStep) {
+  const order = ['session', 'config', 'modules', 'done'];
+  const a = order.indexOf(targetStep);
+  const b = order.indexOf(currentStep);
+  if (b < a) return 'pending';
+  if (b === a) return 'checking';
+  return 'done';
+}
+
+function SkelBar({ w = '100%', h = 10, mt = 0, intense = false }) {
+  return (
+    <span style={{
+      display: 'inline-block',
+      width: w, height: h, marginTop: mt,
+      borderRadius: 3,
+      background: intense
+        ? 'linear-gradient(90deg, #d9d9d9 0%, #ebebeb 50%, #d9d9d9 100%)'
+        : 'linear-gradient(90deg, #e6e6e6 0%, #f1f1f1 50%, #e6e6e6 100%)',
+      backgroundSize: '200% 100%',
+      animation: 'msvshimmer 1.4s linear infinite',
+      verticalAlign: 'middle',
+    }} />
+  );
+}
+
+function SkelOrb({ checking }) {
+  return (
+    <div style={{
+      width: 32, height: 32, borderRadius: '50%',
+      background: checking ? 'rgba(255,70,10,0.10)' : '#e6e6e6',
+      border: checking ? '1.5px dashed var(--accent)' : '1.5px solid #d9d9d9',
+      display: 'grid', placeItems: 'center',
+      flexShrink: 0,
+      animation: checking ? 'msvpulse 1.4s ease-in-out infinite' : 'none',
+    }}>
+      {checking && <Spinner color="var(--accent)" />}
+    </div>
+  );
+}
+
+function BootDot({ active, done }) {
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 6,
+      marginLeft: 10, fontSize: 10,
+      color: active ? 'var(--accent)' : (done ? 'var(--fg-muted)' : 'var(--fg-subtle)'),
+      letterSpacing: '0.06em',
+    }}>
+      <span style={{
+        width: 6, height: 6, borderRadius: '50%',
+        background: active ? 'var(--accent)' : (done ? '#1b6e3f' : '#c2c2c2'),
+        animation: active ? 'msvpulse 1.4s ease-in-out infinite' : 'none',
+      }} />
+      {active ? 'verificando…' : done ? 'pronto' : 'aguardando'}
+    </span>
+  );
+}
+
+function SessionBlockSkeleton({ step }) {
+  const phase = bootPhase('session', step);
+  return (
+    <Card style={{ padding: 0, marginBottom: 24 }} aria-busy="true">
+      <div style={{
+        display: 'grid', gridTemplateColumns: 'auto 1fr auto',
+        alignItems: 'center', gap: 18, padding: '18px 22px',
+      }}>
+        <SkelOrb checking={phase === 'checking'} />
+        <div style={{ minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <SkelBar w={150} h={14} intense />
+            <SkelBar w={120} h={18} />
+          </div>
+          <div style={{ marginTop: 10 }}>
+            <SkelBar w="62%" h={10} />
+          </div>
+        </div>
+        <SkelBar w={138} h={36} />
+      </div>
+    </Card>
+  );
+}
+
+function ModuleRowSkeleton({ index, step }) {
+  const phase = bootPhase('modules', step);
+  return (
+    <Card style={{ padding: 0, opacity: phase === 'pending' ? 0.55 : 1, transition: 'opacity 200ms' }} aria-busy="true">
+      <div style={{
+        display: 'grid', gridTemplateColumns: 'auto 1fr auto',
+        gap: 16, alignItems: 'center', padding: '16px 20px',
+      }}>
+        <SkelOrb checking={phase === 'checking'} />
+        <div style={{ minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <SkelBar w={120 + (index % 3) * 24} h={14} intense />
+            {phase === 'checking' && <SkelBar w={92} h={16} />}
+          </div>
+          <div style={{ marginTop: 8 }}>
+            <SkelBar w="74%" h={9} />
+          </div>
+          {phase === 'checking' && (
+            <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: 'var(--fg-subtle)', fontFamily: 'var(--font-mono)' }}>
+              <Spinner color="var(--accent)" />
+              <span>verificando módulo no banco…</span>
+            </div>
+          )}
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <SkelBar w={120} h={36} />
+          <SkelBar w={92} h={36} />
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+function ConfigRowSkeleton({ index, step }) {
+  const phase = bootPhase('config', step);
+  return (
+    <Card style={{ padding: 0, opacity: phase === 'pending' ? 0.55 : 1, transition: 'opacity 200ms' }} aria-busy="true">
+      <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: 16, alignItems: 'center', padding: '16px 20px' }}>
+        <SkelOrb checking={phase === 'checking'} />
+        <div style={{ minWidth: 0 }}>
+          <SkelBar w={140 + (index % 2) * 30} h={14} intense />
+          <div style={{ marginTop: 8 }}><SkelBar w="68%" h={9} /></div>
+          {phase === 'checking' && (
+            <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: 'var(--fg-subtle)', fontFamily: 'var(--font-mono)' }}>
+              <Spinner color="var(--accent)" />
+              <span>verificando arquivo persistido…</span>
+            </div>
+          )}
+        </div>
+        <SkelBar w={120} h={36} />
+      </div>
+    </Card>
   );
 }
 

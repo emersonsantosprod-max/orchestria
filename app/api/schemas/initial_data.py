@@ -22,8 +22,22 @@ class ReportStatus(str, Enum):
     MISSING = "REPORT_MISSING"
 
 
+class ModuleStatus(BaseModel):
+    enabled: bool
+    reason: str | None = None
+
+
+class ConfigStatus(BaseModel):
+    ready: bool
+    name: str | None = None
+    saved_at: str | None = None
+
+
 class InitialDataResponse(BaseModel):
     catalog_status: CatalogStatus
     measurement_status: MeasurementStatus
     report_status: ReportStatus
     mes_referencia: str | None = None
+    modules: dict[str, ModuleStatus] = {}
+    config: dict[str, ConfigStatus] = {}
+    tables: dict[str, bool] = {}
