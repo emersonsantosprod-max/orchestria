@@ -34,6 +34,14 @@ Structure: `docs/PROJECT_STRUCTURE.md`.
 - Não alterar prefixo `'TREIN. '` — `'TREIN.' in obs_celula` é marca de idempotência.
 - Divergência multi-linha reportada apenas para `tipo='treinamento'`; férias/atestado sobrescrevem.
 
+## QUALITY GATE
+
+Após cada step de TODO que toca `app/`, `tests/` ou `scripts/`, rodar
+`python -m scripts.quality_gate`. Limiares e procedimento de revisão (3
+tentativas) em `.claude/rules/quality-gate.md`. Pular em diff trivial
+(≤3 linhas líquidas). Baseline em `quality_baseline.json` — atualizar
+apenas manualmente via `--update-baseline`.
+
 ## ARCHITECTURE
 
 Flow: `entrada/` → `loaders` → `pipeline` → `[ferias|treinamento|atestado|distribuicao]` → `aplicar_updates` → `saida/`
@@ -43,6 +51,6 @@ Layer rules: `.claude/rules/boundary.md` | SQLite rules: `.claude/rules/sqlite.m
 ## SKILLS & RULES
 
 Skills (auto via `description`/`paths`): `.claude/skills/` — brainstorming, react, python-testing, repository-pattern, migration-window, strategic-compact
-Rules (sempre carregadas): `.claude/rules/` — boundary, sqlite, testing, coding-standards, data-loading
+Rules (sempre carregadas): `.claude/rules/` — boundary, sqlite, testing, coding-standards, data-loading, quality-gate
 Agents (delegáveis): `.claude/agents/` — architect, code-reviewer, tdd-guide
 Sessions: estado vivo em `.claude/sessions/<data>-<topico>.tmp`; `SESSION_STATE.md` aponta para o `.tmp` ativo.

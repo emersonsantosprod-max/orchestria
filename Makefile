@@ -1,6 +1,6 @@
 PYTHON ?= python
 
-.PHONY: install test lint dev build-win clean distclean
+.PHONY: install test lint dev build-win clean distclean quality-gate quality-gate-update
 
 install:
 	$(PYTHON) -m pip install -e .[dev]
@@ -13,6 +13,12 @@ lint:
 
 dev:
 	$(PYTHON) -m app.main
+
+quality-gate:
+	$(PYTHON) -m scripts.quality_gate
+
+quality-gate-update:
+	$(PYTHON) -m scripts.quality_gate --update-baseline
 
 build-win:
 	./venv_win/Scripts/pyinstaller.exe --clean --noconfirm AutomacaoMedicao.spec

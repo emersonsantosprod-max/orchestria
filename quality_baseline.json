@@ -1,0 +1,9 @@
+{
+  "generated_at": "2026-05-06T00:04:00",
+  "metrics": {
+    "lines": 7226,
+    "functions": 437,
+    "oversized_files": 1,
+    "violations": 2
+  }
+}
