@@ -18,6 +18,8 @@
 
 import { useState, useRef, useEffect, useReducer } from 'react';
 
+const BOOTSTRAP_MIN_MS = 1200;
+
 // ─────────────────────────────────────────────────────────────
 // Backend contract — endpoints that exist today.
 // Modules without a route yield a clean RUN_NOT_IMPLEMENTED.
@@ -249,6 +251,9 @@ export default function App() {
   useLogStream(dispatch, state.run);
 
   // Bootstrap — phased reveal while we probe DB state via /api/initial-data.
+  // BOOTSTRAP_DONE is gated on both the API result AND a minimum visible
+  // window (BOOTSTRAP_MIN_MS) so the loading state is perceivable on fast
+  // localhost responses.
   useEffect(() => {
     let cancelled = false;
     const log = (level, msg) => dispatch({
@@ -266,25 +271,30 @@ export default function App() {
       dispatch({ type: 'BOOTSTRAP_STEP', step: 'modules' });
       log('info', 'Verificando módulos disponíveis…');
     }, 850);
-    API.initialData().then(res => {
-      if (cancelled) return;
-      const session = res.measurement_status === 'MEASUREMENT_READY'
-        ? { active: true, mes_referencia: res.mes_referencia, medicao: { name: 'medição registrada', size: 0 }, loadedAt: new Date().toISOString() }
-        : initialState.session;
-      const cfg = {};
-      Object.entries(res.config || {}).forEach(([k, v]) => {
-        if (v.ready) cfg[k] = { name: v.name, savedAt: v.saved_at };
+
+    const minDelay = new Promise(r => setTimeout(r, BOOTSTRAP_MIN_MS));
+    Promise.all([API.initialData(), minDelay])
+      .then(([res]) => {
+        if (cancelled) return;
+        const session = res.measurement_status === 'MEASUREMENT_READY'
+          ? { active: true, mes_referencia: res.mes_referencia, medicao: { name: 'medição registrada', size: 0 }, loadedAt: new Date().toISOString() }
+          : initialState.session;
+        const cfg = {};
+        Object.entries(res.config || {}).forEach(([k, v]) => {
+          if (v.ready) cfg[k] = { name: v.name, savedAt: v.saved_at };
+        });
+        Object.entries(res.tables || {}).forEach(([t, present]) => {
+          log(present ? 'ok' : 'warn', `tabela ${t}: ${present ? 'presente' : 'ausente'}`);
+        });
+        dispatch({ type: 'BOOTSTRAP_DONE', session, modulesMeta: res.modules || {}, config: cfg });
+        log('ok', 'Estado restaurado do servidor');
+      })
+      .catch(async err => {
+        await minDelay;
+        if (cancelled) return;
+        log('error', `Falha no bootstrap: ${err.message || err.code || 'erro'}`);
+        dispatch({ type: 'BOOTSTRAP_DONE' });
       });
-      Object.entries(res.tables || {}).forEach(([t, present]) => {
-        log(present ? 'ok' : 'warn', `tabela ${t}: ${present ? 'presente' : 'ausente'}`);
-      });
-      dispatch({ type: 'BOOTSTRAP_DONE', session, modulesMeta: res.modules || {}, config: cfg });
-      log('ok', 'Estado restaurado do servidor');
-    }).catch(err => {
-      if (cancelled) return;
-      log('error', `Falha no bootstrap: ${err.message || err.code || 'erro'}`);
-      dispatch({ type: 'BOOTSTRAP_DONE' });
-    });
     return () => { cancelled = true; clearTimeout(t1); clearTimeout(t2); };
   }, []);
 
