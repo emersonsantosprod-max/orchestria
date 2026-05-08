@@ -6,6 +6,7 @@ from pathlib import Path
 
 from scripts.quality_gate.metrics import (
     coletar_metricas_codigo,
+    contar_branches_arquivo,
     contar_metricas_arquivo,
 )
 from scripts.quality_gate.report import avaliar_regressao, formatar_tabela
@@ -80,6 +81,59 @@ def test_formatar_tabela_inclui_statements():
     base = {'violations': 0, 'oversized_files': 0, 'lines': 100, 'functions': 5, 'statements': 80}
     cur = {'violations': 0, 'oversized_files': 0, 'lines': 100, 'functions': 5, 'statements': 80}
     assert 'statements' in formatar_tabela(base, cur)
+
+
+def test_contar_branches_arquivo_conta_if_for_while_try():
+    src = (
+        'def f(x):\n'
+        '    if x:\n'
+        '        for i in x:\n'
+        '            while i:\n'
+        '                try:\n'
+        '                    pass\n'
+        '                except ValueError:\n'
+        '                    pass\n'
+    )
+    assert contar_branches_arquivo(src) == 5
+
+
+def test_contar_branches_arquivo_conta_boolop_e_ifexp():
+    src = 'y = (a and b) or c\nz = 1 if x else 2\n'
+    assert contar_branches_arquivo(src) == 3
+
+
+def test_contar_branches_arquivo_conta_comprehension_ifs():
+    src = '[x for x in xs if x > 0 if x < 10]\n'
+    assert contar_branches_arquivo(src) == 2
+
+
+def test_contar_branches_arquivo_syntax_error_retorna_zero():
+    assert contar_branches_arquivo('def x(:\n') == 0
+
+
+def test_coletar_metricas_codigo_inclui_branches(tmp_path: Path):
+    arquivo = tmp_path / 'a.py'
+    arquivo.write_text('if x:\n    pass\n')
+    metricas = coletar_metricas_codigo([tmp_path])
+    assert metricas['branches'] == 1
+
+
+def test_avaliar_regressao_branches_acima_da_tolerancia_falha():
+    base = {'violations': 0, 'oversized_files': 0, 'lines': 1000, 'functions': 100, 'statements': 1000, 'branches': 100}
+    cur = {'violations': 0, 'oversized_files': 0, 'lines': 1000, 'functions': 100, 'statements': 1000, 'branches': 110}
+    assert avaliar_regressao(base, cur) is True
+
+
+def test_avaliar_regressao_baseline_sem_branches_nao_falha():
+    base = {'violations': 0, 'oversized_files': 0, 'lines': 1000, 'functions': 100, 'statements': 1000}
+    cur = {'violations': 0, 'oversized_files': 0, 'lines': 1000, 'functions': 100, 'statements': 1000, 'branches': 0}
+    assert avaliar_regressao(base, cur) is False
+
+
+def test_formatar_tabela_inclui_branches():
+    base = {'violations': 0, 'oversized_files': 0, 'lines': 100, 'functions': 5, 'statements': 80, 'branches': 10}
+    cur = {'violations': 0, 'oversized_files': 0, 'lines': 100, 'functions': 5, 'statements': 80, 'branches': 10}
+    assert 'branches' in formatar_tabela(base, cur)
 
 
 def test_formatar_tabela_inclui_todas_metricas():

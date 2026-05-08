@@ -2,11 +2,11 @@ Plan: /home/emersonagi/.claude/plans/iniciar-cria-o-de-nova-linear-hollerith.md
 Active session: .claude/sessions/2026-05-06-quality-gate.tmp
 
 ## Last Completed Step
-Quality Gate `statements` — scripts/quality_gate/metrics.py, scripts/quality_gate/report.py, tests/test_quality_gate.py, .claude/rules/quality-gate.md, quality_baseline.json
-Test count: 234 passed, 0 failed | Gate: exit 0 (lines=7141, functions=436, statements=4623)
+Quality Gate `branches` — scripts/quality_gate/metrics.py (contar_branches_arquivo), scripts/quality_gate/report.py, tests/test_quality_gate.py, .claude/rules/quality-gate.md, quality_baseline.json
+Test count: 242 passed, 0 failed | Gate: exit 0 (branches=733)
 
 ## Next Step
-Adicionar métrica `branches` ao quality gate — scripts/quality_gate/metrics.py (helper contar_branches_arquivo), tests/test_quality_gate.py (matriz AST), report.py (ORDEM+tolerância), quality_baseline.json
+Adicionar métrica `duplication` ao quality gate (Opção A — janela de tokens, sem dep externa) — scripts/quality_gate/duplication.py (novo), tests/test_quality_gate.py, report.py (ORDEM + ABSOLUTOS), quality_baseline.json
 Blocker (if any): none
 
 ## Invariants Exercised This Session
@@ -25,5 +25,5 @@ Blocker (if any): none
 ## TODO
 - [x] MVP: violations + oversized_files + lines + functions
 - [x] statements
-- [ ] branches
+- [x] branches
 - [ ] duplication (janela de tokens, sem dep externa)

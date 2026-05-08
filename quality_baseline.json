@@ -1,9 +1,10 @@
 {
-  "generated_at": "2026-05-08T19:36:07",
+  "generated_at": "2026-05-08T19:56:27",
   "metrics": {
-    "lines": 7141,
-    "functions": 436,
-    "statements": 4623,
+    "lines": 7179,
+    "functions": 444,
+    "statements": 4651,
+    "branches": 733,
     "oversized_files": 1,
     "violations": 2
   }

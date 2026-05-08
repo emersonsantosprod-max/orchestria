@@ -29,10 +29,11 @@ Ao concluir cada step de TODO ou bloco de implementação que modifique
 | lines           | aumento > +10% sobre baseline    |
 | functions       | aumento > +10% sobre baseline    |
 | statements      | aumento > +10% sobre baseline    |
+| branches        | aumento > +10% sobre baseline    |
 
-(O CLI default é +5% para lines/functions/statements; o gate de step
-usa +10% para tolerar refactors que adicionam testes. Para gate de
-step, chamar com tolerâncias customizadas se necessário.)
+(O CLI default é +5% para lines/functions/statements/branches; o gate
+de step usa +10% para tolerar refactors que adicionam testes. Para
+gate de step, chamar com tolerâncias customizadas se necessário.)
 
 ### Procedimento em caso de falha
 1. Revisar o código produzido no step.
