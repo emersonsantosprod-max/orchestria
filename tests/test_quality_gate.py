@@ -21,14 +21,16 @@ def test_contar_metricas_arquivo_ignora_vazio_e_comentario():
         'async def grava():\n'
         '    pass\n'
     )
-    linhas, funcoes = contar_metricas_arquivo(src)
+    linhas, funcoes, statements = contar_metricas_arquivo(src)
     assert linhas == 4
     assert funcoes == 2
+    assert statements >= 3
 
 
 def test_contar_metricas_arquivo_syntax_error_devolve_zero_funcoes():
-    linhas, funcoes = contar_metricas_arquivo('def quebrado(:\n')
+    linhas, funcoes, statements = contar_metricas_arquivo('def quebrado(:\n')
     assert funcoes == 0
+    assert statements == 0
     assert linhas == 1
 
 
@@ -41,6 +43,7 @@ def test_coletar_metricas_codigo_oversized(tmp_path: Path):
     assert metricas['oversized_files'] == 1
     assert metricas['functions'] == 1
     assert metricas['lines'] == 2 + 600
+    assert metricas['statements'] == 2 + 600
 
 
 def test_avaliar_regressao_violations_aumenta_falha():
@@ -59,6 +62,24 @@ def test_avaliar_regressao_lines_acima_da_tolerancia_falha():
     base = {'violations': 0, 'oversized_files': 0, 'lines': 1000, 'functions': 100}
     cur = {'violations': 0, 'oversized_files': 0, 'lines': 1100, 'functions': 100}
     assert avaliar_regressao(base, cur) is True
+
+
+def test_avaliar_regressao_statements_acima_da_tolerancia_falha():
+    base = {'violations': 0, 'oversized_files': 0, 'lines': 1000, 'functions': 100, 'statements': 1000}
+    cur = {'violations': 0, 'oversized_files': 0, 'lines': 1000, 'functions': 100, 'statements': 1100}
+    assert avaliar_regressao(base, cur) is True
+
+
+def test_avaliar_regressao_baseline_sem_statements_nao_falha():
+    base = {'violations': 0, 'oversized_files': 0, 'lines': 1000, 'functions': 100}
+    cur = {'violations': 0, 'oversized_files': 0, 'lines': 1000, 'functions': 100, 'statements': 0}
+    assert avaliar_regressao(base, cur) is False
+
+
+def test_formatar_tabela_inclui_statements():
+    base = {'violations': 0, 'oversized_files': 0, 'lines': 100, 'functions': 5, 'statements': 80}
+    cur = {'violations': 0, 'oversized_files': 0, 'lines': 100, 'functions': 5, 'statements': 80}
+    assert 'statements' in formatar_tabela(base, cur)
 
 
 def test_formatar_tabela_inclui_todas_metricas():

@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 ABSOLUTOS = ('violations', 'oversized_files')
-ORDEM = ('violations', 'oversized_files', 'lines', 'functions')
+ORDEM = ('violations', 'oversized_files', 'lines', 'functions', 'statements')
 
-TOLERANCIA_PCT_DEFAULT = {'lines': 5.0, 'functions': 5.0}
+TOLERANCIA_PCT_DEFAULT = {'lines': 5.0, 'functions': 5.0, 'statements': 5.0}
 
 
 def _delta_str(item: str, base: int, cur: int) -> str:
