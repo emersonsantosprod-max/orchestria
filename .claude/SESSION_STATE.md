@@ -1,27 +1,29 @@
-Plan: /home/emersonagi/.claude/plans/fetch-this-design-file-velvety-swing.md
+Plan: /home/emersonagi/.claude/plans/iniciar-cria-o-de-nova-linear-hollerith.md
+Active session: .claude/sessions/2026-05-06-quality-gate.tmp
 
 ## Last Completed Step
-Bootstrap loading UI + DB probe — app/api/routes/initial_data.py, app/api/schemas/initial_data.py, tests/api/test_routes_config.py, ui/web/src/App.jsx, ui/web/src/styles/colors_and_type.css
-Test count: 224 passed, 0 failed | Lint: 2 pre-existing errors (registry.py, loaders.py) — não tocados por esta sessão
+Quality Gate MVP — scripts/quality_gate/{__init__,__main__,metrics,violations,report}.py, tests/test_quality_gate.py, Makefile, .claude/rules/quality-gate.md, CLAUDE.md, quality_baseline.json (commit 1bd19dc)
+Test count: 231 passed, 0 failed | Lint: 2 pré-existentes capturadas no baseline
 
 ## Next Step
-Verificação manual no `make dev` + `make build-win` (Windows) para validar SPA empacotada no .exe
+Adicionar métrica `statements` ao quality gate — scripts/quality_gate/metrics.py, tests/test_quality_gate.py, scripts/quality_gate/report.py (ORDEM + tolerância), quality_baseline.json (atualizar via --update-baseline)
 Blocker (if any): none
 
 ## Invariants Exercised This Session
-- /api/initial-data response shape: ✓ (new modules/config/tables fields acrescentados sem quebrar campos legados)
-- Repository pattern (conn injetada, sem commit interno): ✓ — reuso de TreinamentosRepository, MedicaoRepository, RegistryRepository, DistribuicaoRepository
+- Quality gate fora de app/: ✓ — boundary.md respeitado
+- Baseline versionado: ✓ — quality_baseline.json commitado
+- Gate exit 0 sobre HEAD: ✓ — sem regressão
 
 ## Files Modified
-- app/api/schemas/initial_data.py (ModuleStatus + ConfigStatus added)
-- app/api/routes/initial_data.py (modules/config/tables derivation)
-- tests/api/test_routes_config.py (test for new shape)
-- ui/web/src/App.jsx (bootstrap state + phased reveal + skeletons)
-- ui/web/src/styles/colors_and_type.css (msvshimmer keyframe)
+- scripts/quality_gate/ (novo pacote, 5 arquivos)
+- tests/test_quality_gate.py (novo, 7 testes)
+- Makefile (alvos quality-gate, quality-gate-update)
+- .claude/rules/quality-gate.md (novo)
+- CLAUDE.md (seção QUALITY GATE)
+- quality_baseline.json (snapshot inicial)
 
 ## TODO
-- [x] Backend: estender /api/initial-data
-- [x] Frontend: bootstrap UX (skeletons, faseado, blocked-while-bootstrapping)
-- [x] CSS: msvshimmer keyframe
-- [x] Build ui/web/dist via Vite
-- [ ] make build-win (Windows) — gerar AutomacaoMedicao.exe com a SPA atualizada
+- [x] MVP: violations + oversized_files + lines + functions
+- [ ] statements
+- [ ] branches
+- [ ] duplication (janela de tokens, sem dep externa)
