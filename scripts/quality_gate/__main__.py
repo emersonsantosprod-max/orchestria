@@ -12,13 +12,20 @@ from scripts.quality_gate.metrics import coletar_metricas_codigo
 from scripts.quality_gate.report import avaliar_regressao, formatar_tabela
 from scripts.quality_gate.violations import contar_violacoes_ruff
 
+from .duplication import contar_duplicacoes
+
 RAIZ_REPO = Path(__file__).resolve().parents[2]
 BASELINE_DEFAULT = RAIZ_REPO / 'quality_baseline.json'
+RAIZ_APP = (RAIZ_REPO / 'app',)
 
 
 def coletar_metricas(paths: list[Path]) -> dict:
+    """`paths` aplica-se a métricas AST/ruff. `duplication` ignora `paths`
+    intencionalmente e usa apenas RAIZ_APP — tests/ tem padrões
+    arrange/act/assert que inflam o sinal sem valor real."""
     metricas = coletar_metricas_codigo(paths)
     metricas['violations'] = contar_violacoes_ruff(paths)
+    metricas['duplication'] = contar_duplicacoes(list(RAIZ_APP))
     return metricas
 
 

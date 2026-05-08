@@ -26,10 +26,15 @@ Ao concluir cada step de TODO ou bloco de implementação que modifique
 |-----------------|----------------------------------|
 | violations      | qualquer aumento sobre baseline  |
 | oversized_files | qualquer aumento sobre baseline  |
+| duplication     | qualquer aumento sobre baseline  |
 | lines           | aumento > +10% sobre baseline    |
 | functions       | aumento > +10% sobre baseline    |
 | statements      | aumento > +10% sobre baseline    |
 | branches        | aumento > +10% sobre baseline    |
+
+`duplication` mede clones Tipo-2 (janela de 50 tokens, NAMEs normalizados)
+apenas em `app/` — `tests/` é excluído por design para não inflar o sinal
+com padrões arrange/act/assert.
 
 (O CLI default é +5% para lines/functions/statements/branches; o gate
 de step usa +10% para tolerar refactors que adicionam testes. Para
@@ -49,3 +54,10 @@ gate de step, chamar com tolerâncias customizadas se necessário.)
   no diff atual).
 - Não rodar em alterações fora de `app/`, `tests/`, `scripts/`.
 - Não atualizar baseline automaticamente para "fazer o gate passar".
+
+### Tech debt registrada
+- `duplication` retorna apenas contagem agregada. Quando o gate falha
+  com `duplication +N`, o dev não tem atribuição de arquivo/linha.
+  Implementar flag `--verbose` em `scripts/quality_gate/__main__.py`
+  que liste top-N hashes duplicados com pares `(arquivo, linha_inicial)`
+  para facilitar localização. Não-bloqueante.

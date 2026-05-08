@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from scripts.quality_gate.duplication import contar_duplicacoes
 from scripts.quality_gate.metrics import (
     coletar_metricas_codigo,
     contar_branches_arquivo,
@@ -144,3 +145,65 @@ def test_formatar_tabela_inclui_todas_metricas():
         assert item in saida
     assert '+2' in saida
     assert '+10.00%' in saida
+
+
+_SNIPPET_DUPLICAVEL = (
+    'def calcular(a, b, c, d, e):\n'
+    '    x = a + b\n'
+    '    y = c + d\n'
+    '    z = e * 2\n'
+    '    total = x + y + z\n'
+    '    if total > 100:\n'
+    '        return total - 50\n'
+    '    if total < 0:\n'
+    '        return 0\n'
+    '    return total\n'
+)
+
+_SNIPPET_RENOMEADO = (
+    'def somar(p, q, r, s, t):\n'
+    '    alpha = p + q\n'
+    '    beta = r + s\n'
+    '    gamma = t * 2\n'
+    '    soma = alpha + beta + gamma\n'
+    '    if soma > 100:\n'
+    '        return soma - 50\n'
+    '    if soma < 0:\n'
+    '        return 0\n'
+    '    return soma\n'
+)
+
+
+def test_contar_duplicacoes_clone_exato_em_dois_arquivos(tmp_path: Path):
+    (tmp_path / 'a.py').write_text(_SNIPPET_DUPLICAVEL)
+    (tmp_path / 'b.py').write_text(_SNIPPET_DUPLICAVEL)
+    assert contar_duplicacoes([tmp_path]) >= 1
+
+
+def test_contar_duplicacoes_clone_renomeado_e_detectado(tmp_path: Path):
+    (tmp_path / 'a.py').write_text(_SNIPPET_DUPLICAVEL)
+    (tmp_path / 'b.py').write_text(_SNIPPET_RENOMEADO)
+    assert contar_duplicacoes([tmp_path]) >= 1
+
+
+def test_contar_duplicacoes_arquivo_curto_nao_falso_positivo(tmp_path: Path):
+    (tmp_path / 'a.py').write_text('x = 1\n')
+    (tmp_path / 'b.py').write_text('y = 2\n')
+    assert contar_duplicacoes([tmp_path]) == 0
+
+
+def test_contar_duplicacoes_syntax_error_nao_quebra(tmp_path: Path):
+    (tmp_path / 'a.py').write_text('def x(:\n')
+    assert contar_duplicacoes([tmp_path]) == 0
+
+
+def test_avaliar_regressao_duplication_aumenta_falha():
+    base = {'violations': 0, 'oversized_files': 0, 'duplication': 0, 'lines': 100, 'functions': 5}
+    cur = {'violations': 0, 'oversized_files': 0, 'duplication': 1, 'lines': 100, 'functions': 5}
+    assert avaliar_regressao(base, cur) is True
+
+
+def test_formatar_tabela_inclui_duplication():
+    base = {'violations': 0, 'oversized_files': 0, 'duplication': 0, 'lines': 100, 'functions': 5}
+    cur = {'violations': 0, 'oversized_files': 0, 'duplication': 0, 'lines': 100, 'functions': 5}
+    assert 'duplication' in formatar_tabela(base, cur)

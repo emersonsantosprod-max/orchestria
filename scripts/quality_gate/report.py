@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-ABSOLUTOS = ('violations', 'oversized_files')
-ORDEM = ('violations', 'oversized_files', 'lines', 'functions', 'statements', 'branches')
+ABSOLUTOS = ('violations', 'oversized_files', 'duplication')
+ORDEM = ('violations', 'oversized_files', 'duplication', 'lines', 'functions', 'statements', 'branches')
 
 TOLERANCIA_PCT_DEFAULT = {'lines': 5.0, 'functions': 5.0, 'statements': 5.0, 'branches': 5.0}
 
