@@ -17,21 +17,9 @@
 //    "did you load X first" gating.
 
 import { useState, useRef, useEffect, useReducer } from 'react';
-import {
-  Header, SectionTitle, Card, Button, Spinner, StatusOrb,
-  Chip, FileChip, RunDot, ApiErrorBanner,
-} from './components/primitives.jsx';
-import {
-  bootPhase, SkelBar, SkelOrb, BootDot,
-  SessionBlockSkeleton, ModuleRowSkeleton, ConfigRowSkeleton,
-} from './components/skeletons.jsx';
-import { fmtMes, fmtRelative } from './components/format.js';
 import LogPanel from './components/LogPanel.jsx';
 import Sidebar from './components/Sidebar.jsx';
-import SessionBlock from './components/SessionBlock.jsx';
-import ConfigCard from './components/ConfigCard.jsx';
 import ConfigView from './components/ConfigView.jsx';
-import ModuleRow from './components/ModuleRow.jsx';
 import ExecucaoView from './components/ExecucaoView.jsx';
 
 const BOOTSTRAP_MIN_MS = 1200;
