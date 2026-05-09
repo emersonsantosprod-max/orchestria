@@ -43,7 +43,9 @@ def exports_dir() -> Path:
 
 
 def processed_output_path(feature: str) -> Path:
-    return exports_dir() / f'medicao_{feature}_processada.xlsx'
+    path = exports_dir() / f'medicao_{feature}_processada.xlsx'
+    path.parent.mkdir(parents=True, exist_ok=True)
+    return path
 
 
 def logs_dir() -> Path:
