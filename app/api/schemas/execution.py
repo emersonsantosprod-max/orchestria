@@ -17,4 +17,4 @@ class ExecutionResult(BaseModel):
     processados: int
     atualizados: int
     inconsistencias: list[InconsistenciaOut]
-    arquivo_saida: str  # nome do arquivo gerado em data/saida/
+    arquivo_saida: str  # nome do arquivo gerado em exports_dir()

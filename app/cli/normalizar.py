@@ -3,7 +3,7 @@
 app.cli.normalizar — Normaliza a distribuição contratual do BD.
 
 Saída:
-    - data/saida/distribuicao_contratual_normalizada.xlsx
+    - exports_dir()/distribuicao_contratual_normalizada.xlsx
     - Relatório de validação no stdout (4 etapas)
 """
 
@@ -32,16 +32,14 @@ from app.infrastructure.excel_distribuicao import (
     escrever_xlsx_normalizado,
     ler_xlsx_contratual,
 )
-from app.infrastructure.paths import _project_root  # type: ignore
+from app.infrastructure.paths import _project_root, exports_dir  # type: ignore
 
 _BASE_DIR = str(_project_root())
 
 ARQUIVO_ENTRADA = os.path.join(
     _BASE_DIR, 'data', 'entrada', 'Dstribuição Contratual do BD  - 2026.xlsx'
 )
-ARQUIVO_SAIDA = os.path.join(
-    _BASE_DIR, 'data', 'saida', 'distribuicao_contratual_normalizada.xlsx'
-)
+ARQUIVO_SAIDA = str(exports_dir() / 'distribuicao_contratual_normalizada.xlsx')
 
 SEP_SECAO = '═' * 80
 SEP_LINHA = '─' * 70

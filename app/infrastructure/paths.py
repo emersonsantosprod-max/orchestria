@@ -1,8 +1,12 @@
 """
 paths.py — resolução determinística de caminhos em dev e em builds PyInstaller.
 
-- `db_path()`           → local gravável do SQLite (<exe_dir>/data em builds;
-                          raiz do projeto em dev). Nunca depende de CWD.
+- `db_path()`             → local gravável do SQLite (<exe_dir>/data em
+                            builds; raiz do projeto em dev). Nunca depende
+                            de CWD.
+- `exports_dir()`         → diretório de exports (xlsx processados,
+                            relatórios txt). Garante existência do dir.
+- `processed_output_path` → xlsx processado por feature, em `exports_dir`.
 """
 
 from __future__ import annotations
@@ -32,9 +36,14 @@ def db_path() -> Path:
     return _project_root() / 'data' / 'automacao.db'
 
 
-def saida_dir() -> Path:
-    root = _exe_dir() if getattr(sys, 'frozen', False) else _project_root()
-    return root / 'data' / 'saida'
+def exports_dir() -> Path:
+    path = db_path().parent / 'exports'
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def processed_output_path(feature: str) -> Path:
+    return exports_dir() / f'medicao_{feature}_processada.xlsx'
 
 
 def logs_dir() -> Path:

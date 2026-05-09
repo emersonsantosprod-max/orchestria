@@ -19,7 +19,7 @@ from app.api.schemas.execution import ExecutionResult, InconsistenciaOut
 from app.application.pipeline import executar_pipeline
 from app.domain.errors import AutomacaoError
 from app.infrastructure.data import DistribuicaoRepository
-from app.infrastructure.paths import saida_dir
+from app.infrastructure.paths import processed_output_path
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -48,9 +48,7 @@ async def run_distribuicao(
             tmp.write(medicao_bytes)
             tmp_medicao = tmp.name
 
-        destino = saida_dir()
-        destino.mkdir(parents=True, exist_ok=True)
-        caminho_saida = str(destino / "medicao_distribuicao_processada.xlsx")
+        caminho_saida = str(processed_output_path("distribuicao"))
 
         logger.info("run_distribuicao: executando pipeline (validação)")
         resultado = executar_pipeline(

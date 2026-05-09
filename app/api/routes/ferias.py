@@ -20,7 +20,7 @@ from app.api.schemas.execution import ExecutionResult, InconsistenciaOut
 from app.application.pipeline import executar_pipeline
 from app.domain.errors import AutomacaoError
 from app.infrastructure import data
-from app.infrastructure.paths import saida_dir
+from app.infrastructure.paths import processed_output_path
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -53,9 +53,7 @@ async def run_ferias(
 
         relatorio_fonte = io.BytesIO(relatorio_bytes)
 
-        destino = saida_dir()
-        destino.mkdir(parents=True, exist_ok=True)
-        caminho_saida = str(destino / "medicao_ferias_processada.xlsx")
+        caminho_saida = str(processed_output_path("ferias"))
 
         logger.info("run_ferias: executando pipeline")
         resultado = executar_pipeline(

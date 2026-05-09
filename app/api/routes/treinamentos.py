@@ -8,7 +8,7 @@ Fluxo:
   5. Remove temp após escrita; retorna ExecutionResult JSON
 
 Restrições:
-  - Nenhum arquivo persiste em disco além do output em saida_dir()
+  - Nenhum arquivo persiste em disco além do output em exports_dir()
   - bd_treinamentos deve estar populado antes (catalog_status=READY)
 """
 
@@ -28,7 +28,7 @@ from app.api.schemas.execution import ExecutionResult, InconsistenciaOut
 from app.application.pipeline import executar_pipeline
 from app.domain.errors import AutomacaoError
 from app.infrastructure.data import TreinamentosRepository
-from app.infrastructure.paths import saida_dir
+from app.infrastructure.paths import processed_output_path
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -65,9 +65,7 @@ async def run_treinamentos(
         # catalogo → BytesIO (loaders.py aceita Fonte)
         catalogo_fonte = io.BytesIO(catalogo_bytes)
 
-        destino = saida_dir()
-        destino.mkdir(parents=True, exist_ok=True)
-        caminho_saida = str(destino / "medicao_treinamentos_processada.xlsx")
+        caminho_saida = str(processed_output_path("treinamentos"))
 
         logger.info("run_treinamentos: executando pipeline")
         resultado = executar_pipeline(

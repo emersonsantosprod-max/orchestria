@@ -16,7 +16,7 @@ from datetime import datetime
 from pathlib import Path
 
 from app.domain.core import LIMITE_HORAS_TRABALHADAS
-from app.infrastructure.paths import saida_dir
+from app.infrastructure.paths import exports_dir
 
 LIMITE_HH = LIMITE_HORAS_TRABALHADAS
 
@@ -156,9 +156,7 @@ def gerar_relatorio(
 
 
 def salvar_relatorio(conteudo: str) -> Path:
-    destino = saida_dir()
-    destino.mkdir(parents=True, exist_ok=True)
     ts = datetime.now().strftime('%Y%m%d_%H%M%S')
-    caminho = destino / f'relatorio_validacao_horas_{ts}.txt'
+    caminho = exports_dir() / f'relatorio_validacao_horas_{ts}.txt'
     caminho.write_text(conteudo, encoding='utf-8')
     return caminho
