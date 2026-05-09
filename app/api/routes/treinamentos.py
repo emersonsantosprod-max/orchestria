@@ -28,6 +28,10 @@ from app.api.schemas.execution import ExecutionResult, InconsistenciaOut
 from app.application.pipeline import executar_pipeline
 from app.domain.errors import AutomacaoError
 from app.infrastructure.data import TreinamentosRepository
+from app.infrastructure.data.bootstrap import (
+    obter_mes_referencia_medicao,
+    obter_mes_referencia_relatorio_treinamento,
+)
 from app.infrastructure.paths import processed_output_path
 
 logger = logging.getLogger(__name__)
@@ -56,13 +60,28 @@ async def run_treinamentos(
     catalogo_bytes = await catalogo.read()
 
     tmp_medicao: str | None = None
+    tmp_catalogo: str | None = None
     try:
         # medicao → arquivo temporário (salvar_via_zip exige path)
         with tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx") as tmp:
             tmp.write(medicao_bytes)
             tmp_medicao = tmp.name
+        # catalogo → tmp file para extrair mês antes do pipeline
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx") as tmp:
+            tmp.write(catalogo_bytes)
+            tmp_catalogo = tmp.name
 
-        # catalogo → BytesIO (loaders.py aceita Fonte)
+        mes_medicao = obter_mes_referencia_medicao(tmp_medicao)
+        mes_relatorio = obter_mes_referencia_relatorio_treinamento(tmp_catalogo)
+        if mes_medicao != mes_relatorio:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=(
+                    f"Mês do relatório de treinamentos ({mes_relatorio}) "
+                    f"difere do mês da medição ({mes_medicao})."
+                ),
+            )
+
         catalogo_fonte = io.BytesIO(catalogo_bytes)
 
         caminho_saida = str(processed_output_path("treinamentos"))
@@ -92,6 +111,8 @@ async def run_treinamentos(
     finally:
         if tmp_medicao and os.path.exists(tmp_medicao):
             os.remove(tmp_medicao)
+        if tmp_catalogo and os.path.exists(tmp_catalogo):
+            os.remove(tmp_catalogo)
 
     return ExecutionResult(
         processados=resultado.processados,

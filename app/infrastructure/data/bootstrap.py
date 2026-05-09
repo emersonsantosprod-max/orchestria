@@ -21,6 +21,7 @@ from pathlib import Path
 import openpyxl
 
 from app.domain.core import normalizar_data
+from app.domain.errors import PlanilhaInvalidaError
 from app.domain.reference_month import mes_referencia_unico
 from app.infrastructure.data.registry import RegistryRepository
 from app.infrastructure.data.repositories.distribuicao import DistribuicaoRepository
@@ -249,6 +250,8 @@ def registrar_base_treinamentos(path: str | Path, conn: sqlite3.Connection) -> N
             tipo = 'nao_remunerado' if ('não' in tipo_raw or 'nao' in tipo_raw) else 'remunerado'
             records.append((nome, tipo))
     logger.info('registrar_base_treinamentos: %d treinamentos extraídos', len(records))
+    if not records:
+        raise PlanilhaInvalidaError('Base de Treinamentos sem dados')
 
     TreinamentosRepository(conn).salvar(records)
     RegistryRepository(conn).upsert('treinamentos', str(path))
@@ -276,6 +279,8 @@ def registrar_cobranca(path: str | Path, conn: sqlite3.Connection) -> None:
             remunerado = 0 if md_cobranca == 'FÉRIAS S/ DESC' else 1
             records.append((sg_funcao, md_cobranca, remunerado))
     logger.info('registrar_cobranca: %d linhas extraídas', len(records))
+    if not records:
+        raise PlanilhaInvalidaError('Base de Férias sem dados')
 
     FeriasRepository(conn).salvar(records)
     RegistryRepository(conn).upsert('cobranca', str(path))
@@ -305,6 +310,38 @@ def obter_medicao(conn: sqlite3.Connection) -> list[dict]:
             f'Arquivo de medição registrado não encontrado: {caminho}'
         )
     return ler_medicao_do_excel(caminho)[0]
+
+
+def obter_mes_referencia_relatorio_treinamento(path: str | Path) -> str:
+    """Retorna 'YYYY-MM' do mês único do relatório mensal de Treinamentos.
+
+    Lê coluna `data` (col 6) a partir da linha 3 (mesmo schema do
+    `loaders.carregar_dados_treinamento`). Streaming + early-exit.
+    Levanta PlanilhaInvalidaError em multi-mês ou planilha sem datas.
+
+    Duplicação de parsing com o loader é intencional nesta camada — a
+    unificação single-pass é objeto de roadmap separado.
+    """
+    def _pares() -> Iterator[tuple[int, int] | None]:
+        with closing(
+            openpyxl.load_workbook(path, read_only=True, data_only=True)
+        ) as wb:
+            for row in wb.active.iter_rows(min_row=3, values_only=True):
+                if not row or len(row) <= 6:
+                    continue
+                d = row[6]
+                if d is None:
+                    yield None
+                    continue
+                ano = getattr(d, 'year', None)
+                mes = getattr(d, 'month', None)
+                if ano is None or mes is None:
+                    yield None
+                    continue
+                yield (int(ano), int(mes))
+
+    ano, mes = mes_referencia_unico(_pares(), contexto="Relatório de Treinamentos")
+    return f'{ano:04d}-{mes:02d}'
 
 
 def obter_medicao_atual(conn: sqlite3.Connection) -> dict | None:

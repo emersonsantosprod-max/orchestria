@@ -25,6 +25,7 @@ from app.api.schemas.config import (
     DistribuicaoUploadResponse,
     MedicaoUploadResponse,
 )
+from app.domain.errors import AutomacaoError
 from app.infrastructure.data import (
     DistribuicaoRepository,
     FeriasRepository,
@@ -77,7 +78,7 @@ async def upload_catalogo(
         tmp_path = None
         registrar_base_treinamentos(durable, conn)
         count = TreinamentosRepository(conn).count()
-    except ValueError as exc:
+    except (ValueError, AutomacaoError) as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=str(exc),
@@ -112,7 +113,7 @@ async def upload_medicao(
         durable = _persistir_upload_permanente(tmp_path, 'medicao')
         tmp_path = None
         avisos, count = registrar_medicao_arquivo(durable, conn)
-    except ValueError as exc:
+    except (ValueError, AutomacaoError) as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=str(exc),
@@ -149,7 +150,7 @@ async def upload_cobranca(
         tmp_path = None
         registrar_cobranca(durable, conn)
         count = FeriasRepository(conn).count()
-    except ValueError as exc:
+    except (ValueError, AutomacaoError) as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=str(exc),
@@ -182,7 +183,7 @@ async def upload_distribuicao(
         tmp_path = None
         registrar_bd(durable, conn)
         count = DistribuicaoRepository(conn).count()
-    except ValueError as exc:
+    except (ValueError, AutomacaoError) as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=str(exc),
