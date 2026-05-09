@@ -13,15 +13,11 @@ from app.infrastructure.data import conectar
 
 
 @pytest.fixture
-def client(tmp_path, monkeypatch):
+def client(isolated_paths, monkeypatch):
     from app.api.dependencies import get_conn
     from app.api.main import app
 
-    uploads = tmp_path / "uploads"
-    uploads.mkdir()
-    monkeypatch.setattr(
-        "app.infrastructure.paths.uploads_dir", lambda: uploads
-    )
+    uploads = isolated_paths / "uploads"
     monkeypatch.setattr(
         "app.api.routes.config.uploads_dir", lambda: uploads
     )
@@ -29,7 +25,7 @@ def client(tmp_path, monkeypatch):
         "app.infrastructure.data.bootstrap.uploads_dir", lambda: uploads
     )
 
-    db = tmp_path / "test.db"
+    db = isolated_paths / "test.db"
     conectar(db).close()
 
     def _override():
