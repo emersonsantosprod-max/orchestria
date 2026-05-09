@@ -22,11 +22,11 @@ MEDICAO_MOCK = FIXTURES / "medicao_mock.xlsx"
 
 
 @pytest.fixture
-def client(tmp_path):
+def client(isolated_paths):
     from app.api.dependencies import get_conn
     from app.api.main import app
 
-    db = tmp_path / "test.db"
+    db = isolated_paths / "test.db"
     conectar(db).close()
 
     def _override():
