@@ -1,40 +1,37 @@
-Plan: /home/emersonagi/.claude/plans/ler-session-state-e-claude-sessions-2026-hazy-pelican.md
-Active session: .claude/sessions/2026-05-06-quality-gate.tmp (concluído)
+Plan: /home/emersonagi/.claude/plans/ler-session-state-e-claude-sessions-2026-sorted-breeze.md
+Active session: .claude/sessions/2026-05-08-reorg-estrutura.tmp (a criar)
 
 ## Last Completed Step
-Quality Gate `duplication` (Tipo-2, 50 tokens, app/ only) — scripts/quality_gate/duplication.py (novo), scripts/quality_gate/__main__.py, scripts/quality_gate/report.py, tests/test_quality_gate.py, .claude/rules/quality-gate.md, quality_baseline.json
-Test count: 248 passed, 0 failed | Gate: exit 0 (duplication=712)
+Reorg estrutural — ui/→app/ui/, docs/→.claude/, deletados assets/ data/ docs/ dist/ caches egg-info; pipeline emite 'validar_distribuicao=True ignorado: bd_distribuicao vazia' quando bd está vazia; eliminados popular_bd_se_vazio, popular_treinamentos_se_vazio, bundled_distribuicao_xlsx, bundled_treinamentos_xlsx.
+Test count: 244 passed, 0 failed | Quality gate: exit 0 | Commit: 66b8d42
 
 ## Next Step
-Mover `scripts/quality_gate/` (hoje "scripts perdidos" no projeto) para a área de gestão de contexto em `.claude/` — proposta: `.claude/tools/quality_gate/`. Justificativa: a ferramenta serve à governança de contexto/qualidade do agente, não ao runtime de `app/`. Tarefas previstas:
-1. Criar `.claude/tools/quality_gate/` e mover os 5 módulos (`__init__.py`, `__main__.py`, `metrics.py`, `report.py`, `violations.py`, `duplication.py`).
-2. Ajustar `Makefile` (`quality-gate`, `quality-gate-update`) para o novo módulo path.
-3. Ajustar imports relativos/absolutos e `RAIZ_REPO = Path(__file__).resolve().parents[3]`.
-4. Atualizar `tests/test_quality_gate.py` imports.
-5. Atualizar `.claude/rules/quality-gate.md` (paths e comando).
-6. Atualizar `CLAUDE.md` seção QUALITY GATE.
-7. Validar: `make test` + `make quality-gate` exit 0 + baseline inalterado.
-8. Tech debt anterior (flag `--verbose`) permanece no backlog.
-Blocker (if any): definir se `.claude/tools/` é o subdir correto ou se convém `.claude/quality_gate/` direto — esclarecer com o usuário antes de executar.
+Tech debt registrada: implementar flag `--verbose` em `scripts/quality_gate/__main__.py` listando top-N hashes duplicados com `(arquivo, linha_inicial)` para localização de duplicação.
+Blocker (if any): none
 
 ## Invariants Exercised This Session
-- Quality gate fora de app/: ✓ — boundary.md respeitado (código em scripts/)
-- Baseline versionado: ✓ — quality_baseline.json commitado
-- Gate exit 0 sobre HEAD: ✓ — sem regressão
-- Stdlib only: ✓ — duplication usa tokenize+Counter, sem nova dep
+- Boundary respeitado (app/domain sem sqlite/openpyxl): ✓
+- Schema idempotente em conectar(): ✓ — testes que dependiam de popular_bd_se_vazio agora usam só conectar()
+- Pipeline single-pass mês de referência: ✓
+- Quality gate exit 0 sobre HEAD: ✓ — métricas absolutas estáveis, AST métricas caíram (delete de funções)
 
 ## Files Modified
-- scripts/quality_gate/duplication.py (novo, ~45 linhas)
-- scripts/quality_gate/__main__.py (RAIZ_APP + wire)
-- scripts/quality_gate/report.py (ORDEM + ABSOLUTOS)
-- tests/test_quality_gate.py (+6 testes)
-- .claude/rules/quality-gate.md (limiar + tech debt)
-- quality_baseline.json (snapshot com duplication=712)
+- ui/ → app/ui/ (git mv, histórico preservado)
+- docs/PROJECT_STRUCTURE.md → .claude/PROJECT_STRUCTURE.md
+- AutomacaoMedicao.spec, app/api/main.py, app/infrastructure/paths.py, CLAUDE.md, Makefile (paths atualizados)
+- app/infrastructure/data/bootstrap.py (eliminados popular_bd/treinamentos_se_vazio + import bundled_*)
+- app/infrastructure/data/__init__.py (re-exports limpos)
+- app/cli/validar_dist.py, app/api/main.py (chamadas removidas)
+- app/application/pipeline.py (emite 'ignorado' em bd vazia)
+- tests/test_integration.py, tests/test_db.py (asserts compatíveis; 4 testes obsoletos removidos)
+- pyproject.toml (cache_dir/cache-dir → build/)
 
 ## TODO
-- [x] MVP: violations + oversized_files + lines + functions
-- [x] statements
-- [x] branches
-- [x] duplication (Opção A — janela de tokens)
-- [ ] Mover quality_gate de `scripts/` para `.claude/tools/quality_gate/` (gestão de contexto)
-- [ ] Tech debt: flag `--verbose` listando (arquivo, linha) das janelas duplicadas
+- [x] Reorg estrutural + eliminação de bootstrap-by-xlsx
+- [ ] `scripts/quality_gate` flag `--verbose` para duplication (top-N hashes + paths)
+
+## Resume prompt
+Plan: /home/emersonagi/.claude/plans/ler-session-state-e-claude-sessions-2026-sorted-breeze.md
+State: /home/emersonagi/workspace/automacao/.claude/SESSION_STATE.md
+
+Ler ambos. Próximo step: `--verbose` em scripts/quality_gate listando duplicações por (arquivo, linha).
