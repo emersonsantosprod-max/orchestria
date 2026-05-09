@@ -193,7 +193,7 @@ const LOG_SCRIPTS = {
   ],
   treinamentos: [
     ['info', 'Carregando relatório SOC…'],
-    ['info', 'Cruzando matrículas com base de cobrança'],
+    ['info', 'Cruzando matrículas com Base de Férias'],
     ['info', '236 linhas válidas · 3 sem contrato ativo no período'],
     ['warn', '3 inconsistências serão exportadas para revisão'],
     ['ok',   'Lançamento aplicado · ver Validação para detalhes'],
@@ -211,7 +211,7 @@ const LOG_SCRIPTS = {
     ['ok',   'Lançamento concluído'],
   ],
   'validar-hr': [
-    ['info', 'Comparando HR com base de cobrança'],
+    ['info', 'Comparando HR com Base de Férias'],
     ['info', 'Verificando datas de admissão/desligamento'],
     ['ok',   'Nenhuma divergência encontrada'],
   ],
@@ -245,13 +245,13 @@ export const MODULES = [
   { id: 'treinamentos',  label: 'Treinamentos',  deps: ['relatorio'], blurb: 'Aplica os lançamentos de treinamentos (SOC) na medição ativa.' },
   { id: 'ferias',        label: 'Férias',        deps: ['relatorio'], blurb: 'Aplica descontos e devoluções a partir do relatório geral de férias.' },
   { id: 'atestados',     label: 'Atestados',     deps: ['relatorio'], blurb: 'Aplica atestados emitidos no período da medição.' },
-  { id: 'validar-hr',    label: 'Validar HR',    deps: [],            blurb: 'Verifica consistência entre HR e base de cobrança. Não requer arquivo.' },
+  { id: 'validar-hr',    label: 'Validar HR',    deps: [],            blurb: 'Verifica consistência entre HR e Base de Férias. Não requer arquivo.' },
   { id: 'validar-dist',  label: 'Validar Dist.', deps: ['sqlite'],    blurb: 'Cruza distribuição com bd_distribuicao.sqlite (Config).' },
 ];
 
 const CONFIG_KEYS = [
-  { key: 'base_cobranca',     label: 'Base de cobrança',     hint: 'Persistida. Usada por todos os módulos.', accept: '.xlsx,.xls' },
-  { key: 'base_treinamentos', label: 'Base de treinamentos', hint: 'Catálogo de cursos e cargas horárias.',   accept: '.xlsx,.xls' },
+  { key: 'base_treinamentos', label: 'Base de Treinamentos', hint: 'Catálogo de cursos e cargas horárias.',   accept: '.xlsx,.xls' },
+  { key: 'base_cobranca',     label: 'Base de Férias',       hint: 'Persistida. Usada por todos os módulos.', accept: '.xlsx,.xls' },
   { key: 'bd_distribuicao',   label: 'BD Distribuição',      hint: 'SQLite. Requerido para Validar Dist.',     accept: '.sqlite,.db' },
 ];
 
