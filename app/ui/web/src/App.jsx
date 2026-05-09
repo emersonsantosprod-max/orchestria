@@ -32,6 +32,7 @@ import SessionBlock from './components/SessionBlock.jsx';
 import ConfigCard from './components/ConfigCard.jsx';
 import ConfigView from './components/ConfigView.jsx';
 import ModuleRow from './components/ModuleRow.jsx';
+import ExecucaoView from './components/ExecucaoView.jsx';
 
 const BOOTSTRAP_MIN_MS = 1200;
 
@@ -349,13 +350,13 @@ export default function App() {
       fontFamily: 'var(--font-sans)', color: 'var(--fg)',
     }}>
       <Sidebar view={view} setView={setView} session={state.session} blocked={blocked} bootstrapping={state.bootstrapping} />
-      <Main view={view} state={state} dispatch={dispatch} blocked={blocked} fileRefs={fileRefs} />
+      <Main view={view} setView={setView} state={state} dispatch={dispatch} blocked={blocked} fileRefs={fileRefs} />
     </div>
   );
 }
 
 
-function Main({ view, state, dispatch, blocked, fileRefs }) {
+function Main({ view, setView, state, dispatch, blocked, fileRefs }) {
   return (
     <div style={{
       display: 'grid',
@@ -365,7 +366,7 @@ function Main({ view, state, dispatch, blocked, fileRefs }) {
     }}>
       <div style={{ overflow: 'auto', minWidth: 0 }}>
         {view === 'execucao'
-          ? <ExecucaoView state={state} dispatch={dispatch} blocked={blocked} fileRefs={fileRefs} />
+          ? <ExecucaoView state={state} dispatch={dispatch} blocked={blocked} fileRefs={fileRefs} setView={setView} />
           : <ConfigView   state={state} dispatch={dispatch} blocked={blocked} fileRefs={fileRefs} configKeys={CONFIG_KEYS} />}
       </div>
       <LogPanel logs={state.logs} run={state.run} dispatch={dispatch} />
@@ -373,31 +374,6 @@ function Main({ view, state, dispatch, blocked, fileRefs }) {
   );
 }
 
-function ExecucaoView({ state, dispatch, blocked, fileRefs }) {
-  const boot = state.bootstrapping;
-  return (
-    <div style={{ padding: '28px 32px 48px', maxWidth: 920 }}>
-      <Header title="Execução" subtitle="Carregue a medição do mês e execute os módulos de lançamento." />
-      {state.apiError && (
-        <ApiErrorBanner err={state.apiError} onDismiss={() => dispatch({ type: 'API_ERROR', error: null })} />
-      )}
-      {boot
-        ? <SessionBlockSkeleton step={state.bootstrapStep} />
-        : <SessionBlock state={state} dispatch={dispatch} blocked={blocked} fileRefs={fileRefs} />}
-      <SectionTitle>
-        Módulos
-        {boot && <BootDot active={state.bootstrapStep === 'modules'} done={false} />}
-      </SectionTitle>
-      <div style={{ display: 'grid', gap: 10 }}>
-        {boot
-          ? MODULES.map((m, i) => <ModuleRowSkeleton key={m.id} index={i} step={state.bootstrapStep} />)
-          : MODULES.map(m => (
-              <ModuleRow key={m.id} module={m} state={state} dispatch={dispatch} blocked={blocked} fileRefs={fileRefs} />
-            ))}
-      </div>
-    </div>
-  );
-}
 
 
 
