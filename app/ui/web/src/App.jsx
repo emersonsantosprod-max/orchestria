@@ -31,6 +31,7 @@ import Sidebar from './components/Sidebar.jsx';
 import SessionBlock from './components/SessionBlock.jsx';
 import ConfigCard from './components/ConfigCard.jsx';
 import ConfigView from './components/ConfigView.jsx';
+import ModuleRow from './components/ModuleRow.jsx';
 
 const BOOTSTRAP_MIN_MS = 1200;
 
@@ -239,7 +240,7 @@ function useLogStream(dispatch, run) {
 // ─────────────────────────────────────────────────────────────
 // MODULES & CONFIG descriptors
 // ─────────────────────────────────────────────────────────────
-const MODULES = [
+export const MODULES = [
   { id: 'treinamentos',  label: 'Treinamentos',  deps: ['relatorio'], blurb: 'Aplica os lançamentos de treinamentos (SOC) na medição ativa.' },
   { id: 'ferias',        label: 'Férias',        deps: ['relatorio'], blurb: 'Aplica descontos e devoluções a partir do relatório geral de férias.' },
   { id: 'atestados',     label: 'Atestados',     deps: ['relatorio'], blurb: 'Aplica atestados emitidos no período da medição.' },
@@ -252,6 +253,30 @@ const CONFIG_KEYS = [
   { key: 'base_treinamentos', label: 'Base de treinamentos', hint: 'Catálogo de cursos e cargas horárias.',   accept: '.xlsx,.xls' },
   { key: 'bd_distribuicao',   label: 'BD Distribuição',      hint: 'SQLite. Requerido para Validar Dist.',     accept: '.sqlite,.db' },
 ];
+
+// Pure helper: deterministic gating reason for a module run.
+// Priority order is the source of truth for `canRun` UX.
+export function getRunBlockReason(moduleId, state) {
+  const mod = MODULES.find(x => x.id === moduleId);
+  if (!mod) return { blocked: true, reason: 'Módulo desconhecido.' };
+  const m = state.modules[moduleId] || {};
+  const sessionOff = !state.session.active;
+  const needsRel = mod.deps.includes('relatorio');
+  const needsSqlite = mod.deps.includes('sqlite');
+  const sqliteReady = !needsSqlite || !!state.config.bd_distribuicao;
+  const relReady = !needsRel || !!m.relatorio;
+  const baseTr = moduleId === 'treinamentos' ? !!state.config.base_treinamentos : true;
+  const baseFe = moduleId === 'ferias'       ? !!state.config.base_cobranca    : true;
+  const meta = state.modulesMeta?.[moduleId];
+
+  if (sessionOff)            return { blocked: true, reason: 'Carregue a medição para liberar este módulo.' };
+  if (!relReady)             return { blocked: true, reason: 'Selecione o relatório do módulo.' };
+  if (!sqliteReady)          return { blocked: true, reason: 'Configure bd_distribuicao em Configurações.' };
+  if (!baseTr)               return { blocked: true, reason: 'Configure Base de Treinamentos em Configurações.' };
+  if (!baseFe)               return { blocked: true, reason: 'Configure Base de Férias em Configurações.' };
+  if (meta && !meta.enabled) return { blocked: true, reason: meta.reason || 'Indisponível.' };
+  return { blocked: false, reason: null };
+}
 
 // ─────────────────────────────────────────────────────────────
 // APP SHELL
@@ -375,108 +400,4 @@ function ExecucaoView({ state, dispatch, blocked, fileRefs }) {
 }
 
 
-function ModuleRow({ module, state, dispatch, blocked, fileRefs }) {
-  const m = state.modules[module.id] || {};
-  const session = state.session;
-  const sessionOff = !session.active;
-  const needsRel = module.deps.includes('relatorio');
-  const needsSqlite = module.deps.includes('sqlite');
-  const sqliteReady = !needsSqlite || !!state.config.bd_distribuicao;
-  const relReady = !needsRel || !!m.relatorio;
-  const canRun = !blocked && !sessionOff && relReady && sqliteReady;
-  const running = state.run.action === module.id;
-
-  const meta = state.modulesMeta?.[module.id];
-  let reason = null;
-  if (sessionOff) reason = 'Carregue a medição para liberar este módulo.';
-  else if (!relReady) reason = 'Selecione o relatório do módulo.';
-  else if (!sqliteReady) reason = 'Configure bd_distribuicao em Configuração.';
-  else if (meta && !meta.enabled && meta.reason) reason = meta.reason;
-
-  const fileRef = useRef(null);
-  function pickRel() { if (!sessionOff && !blocked) fileRef.current?.click(); }
-  function onRel(e) {
-    const f = e.target.files?.[0]; if (!f) return;
-    e.target.value = '';
-    fileRefs.relatorios.current[module.id] = f;  // C5: keep blob for multipart
-    dispatch({ type: 'MODULE_RELATORIO', module: module.id, file: { name: f.name, size: f.size } });
-    dispatch({ type: 'LOG', entry: { ts: new Date().toISOString(), level: 'info', source: module.id, msg: `Relatório anexado: ${f.name}` } });
-  }
-  function run() {
-    if (!canRun) return;
-    dispatch({ type: 'RUN_START', action: module.id });
-    const payload = {
-      medicao: fileRefs.medicao.current,
-      relatorio: fileRefs.relatorios.current[module.id] || null,
-    };
-    API.run(module.id, payload).then(res => {
-      const summary = res.summary
-        || `${res.processados ?? 0} processado(s) · ${res.atualizados ?? 0} atualizado(s) · ${(res.inconsistencias?.length ?? 0)} inconsistência(s)`;
-      dispatch({ type: 'RUN_END_OK', module: module.id, summary, output: res.arquivo_saida || null });
-    }).catch(err => {
-      dispatch({ type: 'RUN_END_ERR', module: module.id, error: { code: err.code || 'RUN_FAILED', message: err.message || 'Falha de execução' } });
-    });
-  }
-
-  return (
-    <Card style={{
-      padding: 0,
-      borderColor: sessionOff ? 'var(--border)' : 'var(--border)',
-      opacity: sessionOff ? 0.7 : 1,
-    }}>
-      <div style={{
-        display: 'grid', gridTemplateColumns: 'auto 1fr auto',
-        gap: 16, alignItems: 'center', padding: '16px 20px',
-      }}>
-        <StatusOrb
-          ok={m.lastRun?.ok}
-          err={m.lastRun && !m.lastRun.ok}
-          loading={running}
-          step={MODULES.findIndex(x => x.id === module.id) + 1}
-        />
-        <div style={{ minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            <div style={{ fontSize: 15, fontWeight: 600 }}>{module.label}</div>
-            {m.lastRun?.ok && <Chip kind="ok">Concluído</Chip>}
-            {m.lastRun && !m.lastRun.ok && <Chip kind="err">{m.lastRun.error}</Chip>}
-            {needsRel && !m.relatorio && <Chip kind="muted">Relatório necessário</Chip>}
-            {needsSqlite && !sqliteReady && <Chip kind="muted">SQLite necessário</Chip>}
-          </div>
-          <div style={{ fontSize: 13, color: 'var(--fg-muted)', marginTop: 3 }}>
-            {module.blurb}
-          </div>
-          {m.relatorio && (
-            <div style={{ marginTop: 8 }}>
-              <FileChip name={m.relatorio.name} size={m.relatorio.size}
-                onChange={pickRel} disabled={blocked || sessionOff} />
-            </div>
-          )}
-          {m.lastRun?.ok && m.lastRun.summary && (
-            <div style={{ fontSize: 12.5, color: '#1b6e3f', marginTop: 8, fontWeight: 500 }}>
-              ✓ {m.lastRun.summary}
-            </div>
-          )}
-          {reason && (
-            <div style={{ fontSize: 12, color: 'var(--fg-subtle)', marginTop: 6, fontStyle: 'italic' }}>
-              {reason}
-            </div>
-          )}
-        </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          {needsRel && (
-            <>
-              <Button kind="secondary" disabled={blocked || sessionOff} onClick={pickRel}>
-                {m.relatorio ? 'Trocar relatório' : 'Anexar relatório'}
-              </Button>
-              <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" hidden onChange={onRel} />
-            </>
-          )}
-          <Button kind="primary" disabled={!canRun} running={running} onClick={run}>
-            Executar
-          </Button>
-        </div>
-      </div>
-    </Card>
-  );
-}
 
