@@ -21,6 +21,7 @@ from pathlib import Path
 import openpyxl
 
 from app.domain.core import normalizar_data
+from app.domain.reference_month import mes_referencia_unico
 from app.infrastructure.data.registry import RegistryRepository
 from app.infrastructure.data.repositories.distribuicao import DistribuicaoRepository
 from app.infrastructure.data.repositories.ferias import FeriasRepository
@@ -174,23 +175,23 @@ def ler_medicao_do_excel(path: str | Path) -> tuple[list[dict], list[str]]:
     return registros, avisos
 
 
-def obter_mes_referencia_excel(path: str | Path) -> str | None:
-    """Retorna 'YYYY-MM' se todas as datas da medição pertencem ao mesmo mês.
+def obter_mes_referencia_medicao(path: str | Path) -> str:
+    """Retorna 'YYYY-MM' do mês único da medição.
 
-    Lê apenas o necessário para decidir: para na segunda data de mês distinto.
-    Datas inválidas/vazias são ignoradas.
+    Levanta PlanilhaInvalidaError se as datas atravessarem múltiplos
+    meses ou se não houver datas válidas. Streaming: para na primeira
+    divergência.
     """
-    mes_unico: str | None = None
-    with _abrir_aba_frequencia(path) as (ws, col_map, header_row_idx):
-        for data_str, _sg, _md, _pct in _iter_linhas_dados(ws, col_map, header_row_idx):
-            if not data_str or len(data_str) != 10:
-                continue
-            mes = f'{data_str[6:10]}-{data_str[3:5]}'
-            if mes_unico is None:
-                mes_unico = mes
-            elif mes != mes_unico:
-                return None
-    return mes_unico
+    def _pares() -> Iterator[tuple[int, int] | None]:
+        with _abrir_aba_frequencia(path) as (ws, col_map, header_row_idx):
+            for data_str, _sg, _md, _pct in _iter_linhas_dados(ws, col_map, header_row_idx):
+                if not data_str or len(data_str) != 10:
+                    yield None
+                    continue
+                yield (int(data_str[6:10]), int(data_str[3:5]))
+
+    ano, mes = mes_referencia_unico(_pares(), contexto="Medição")
+    return f'{ano:04d}-{mes:02d}'
 
 
 def registrar_bd(path: str | Path, conn: sqlite3.Connection) -> None:

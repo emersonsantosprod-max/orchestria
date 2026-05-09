@@ -28,6 +28,7 @@ from app.application.services import validacao_distribuicao as vdist
 from app.application.services.lancar_treinamentos import LancarTreinamentosService
 from app.domain import atestado, ferias
 from app.domain.core import inconsistencia
+from app.domain.reference_month import mes_referencia_unico
 from app.domain.errors import (
     ArquivoAbertoError,
     ArquivoNaoEncontradoError,
@@ -65,13 +66,11 @@ def _mes_referencia(medicao_por_matricula: dict):
     ]
     if not todas:
         raise RuntimeError("Medição não contém datas válidas para inferir mês de referência.")
-    meses = {(d.year, d.month) for d in todas}
-    if len(meses) > 1:
-        rotulos = sorted(f"{ano:04d}-{mes:02d}" for ano, mes in meses)
-        raise PlanilhaInvalidaError(
-            "Medição contém datas em múltiplos meses: " + ", ".join(rotulos)
-        )
-    return min(todas).replace(day=1)
+    ano, mes = mes_referencia_unico(
+        ((d.year, d.month) for d in todas),
+        contexto="Medição",
+    )
+    return min(todas).replace(year=ano, month=mes, day=1)
 
 
 def derivar_mes_referencia_da_medicao(caminho_medicao: str):

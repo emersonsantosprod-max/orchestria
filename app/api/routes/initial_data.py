@@ -49,7 +49,7 @@ from app.infrastructure.data import (
     DistribuicaoRepository,
     RegistryRepository,
     TreinamentosRepository,
-    obter_mes_referencia_excel,
+    obter_mes_referencia_medicao,
 )
 
 logger = logging.getLogger(__name__)
@@ -69,7 +69,7 @@ def _tabelas_presentes(conn: sqlite3.Connection) -> dict[str, bool]:
 
 def _derivar_mes_referencia(caminho: str) -> str | None:
     try:
-        return obter_mes_referencia_excel(Path(caminho))
+        return obter_mes_referencia_medicao(Path(caminho))
     except FileNotFoundError:
         logger.error(
             "Arquivo de medição registrado ausente em disco: %s", caminho
