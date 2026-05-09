@@ -14,7 +14,7 @@ from app.infrastructure.data import (
     obter_medicao,
     obter_registro_arquivos,
     registrar_bd,
-    registrar_medicao,
+    registrar_medicao_arquivo,
 )
 from app.infrastructure.paths import db_path
 from app.infrastructure.relatorio_distribuicao import salvar_relatorio
@@ -36,7 +36,7 @@ def cmd_registrar_medicao(path_str: str, conn) -> int:
         print(f"[ERRO] Arquivo não encontrado: {path}", file=sys.stderr)
         return 1
     print(f"Registrando Medição: {path} …")
-    avisos = registrar_medicao(path, conn)
+    avisos, _ = registrar_medicao_arquivo(path, conn)
     for av in avisos:
         print(f"  [AVISO] {av}")
     print('Medição registrada com sucesso.')

@@ -1,8 +1,12 @@
-"""POST /api/config/catalogo  e  POST /api/config/medicao.
+"""POST /api/config/{catalogo,medicao,cobranca,distribuicao}.
 
-Cada endpoint recebe um xlsx via multipart, persiste em SQLite e registra
-em registro_arquivos. Após sucesso, GET /api/initial-data passa a retornar
-CATALOG_READY / MEASUREMENT_READY conforme o caso.
+Cada endpoint recebe um xlsx via multipart, valida o parse, promove o
+arquivo para storage durável (`data/uploads/<tipo>.xlsx`) via
+`os.replace`, e registra o caminho em `registro_arquivos`.
+
+Política de uploads corrompidos: o parse roda contra o arquivo temporário
+ANTES do `os.replace`. Falha de validação descarta o tmp e preserva o
+arquivo durável anterior intacto — registry permanece coerente.
 """
 
 from __future__ import annotations
@@ -24,23 +28,37 @@ from app.api.schemas.config import (
 from app.infrastructure.data import (
     DistribuicaoRepository,
     FeriasRepository,
-    MedicaoRepository,
     TreinamentosRepository,
+    ler_medicao_do_excel,
     registrar_base_treinamentos,
     registrar_bd,
     registrar_cobranca,
-    registrar_medicao,
+    registrar_medicao_arquivo,
 )
+from app.infrastructure.data.bootstrap import _persistir_upload_permanente
+from app.infrastructure.paths import uploads_dir
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
 async def _persistir_em_tmp(arquivo: UploadFile) -> str:
+    """Grava o upload em arquivo temporário dentro de `uploads_dir()`.
+
+    Mesmo filesystem do destino — pré-requisito para `os.replace` ser
+    atômico no overwrite.
+    """
     blob = await arquivo.read()
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx") as tmp:
+    with tempfile.NamedTemporaryFile(
+        delete=False, suffix='.xlsx', dir=str(uploads_dir())
+    ) as tmp:
         tmp.write(blob)
         return tmp.name
+
+
+def _remover_se_existir(path: str | None) -> None:
+    if path and os.path.exists(path):
+        os.remove(path)
 
 
 @router.post(
@@ -55,7 +73,9 @@ async def upload_catalogo(
     tmp_path: str | None = None
     try:
         tmp_path = await _persistir_em_tmp(arquivo)
-        registrar_base_treinamentos(tmp_path, conn)
+        durable = _persistir_upload_permanente(tmp_path, 'treinamentos')
+        tmp_path = None
+        registrar_base_treinamentos(durable, conn)
         count = TreinamentosRepository(conn).count()
     except ValueError as exc:
         raise HTTPException(
@@ -69,8 +89,7 @@ async def upload_catalogo(
             detail=str(exc),
         ) from exc
     finally:
-        if tmp_path and os.path.exists(tmp_path):
-            os.remove(tmp_path)
+        _remover_se_existir(tmp_path)
 
     return CatalogoUploadResponse(count=count, arquivo=arquivo.filename or "")
 
@@ -87,8 +106,12 @@ async def upload_medicao(
     tmp_path: str | None = None
     try:
         tmp_path = await _persistir_em_tmp(arquivo)
-        avisos = registrar_medicao(tmp_path, conn)
-        count = MedicaoRepository(conn).count()
+        # Valida ANTES de promover para durável: se o Excel for inválido,
+        # o storage durável anterior (se existir) permanece intacto.
+        _, avisos = ler_medicao_do_excel(tmp_path)
+        durable = _persistir_upload_permanente(tmp_path, 'medicao')
+        tmp_path = None
+        avisos, count = registrar_medicao_arquivo(durable, conn)
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -101,8 +124,7 @@ async def upload_medicao(
             detail=str(exc),
         ) from exc
     finally:
-        if tmp_path and os.path.exists(tmp_path):
-            os.remove(tmp_path)
+        _remover_se_existir(tmp_path)
 
     return MedicaoUploadResponse(
         count=count,
@@ -123,7 +145,9 @@ async def upload_cobranca(
     tmp_path: str | None = None
     try:
         tmp_path = await _persistir_em_tmp(arquivo)
-        registrar_cobranca(tmp_path, conn)
+        durable = _persistir_upload_permanente(tmp_path, 'cobranca')
+        tmp_path = None
+        registrar_cobranca(durable, conn)
         count = FeriasRepository(conn).count()
     except ValueError as exc:
         raise HTTPException(
@@ -137,8 +161,7 @@ async def upload_cobranca(
             detail=str(exc),
         ) from exc
     finally:
-        if tmp_path and os.path.exists(tmp_path):
-            os.remove(tmp_path)
+        _remover_se_existir(tmp_path)
 
     return CobrancaUploadResponse(count=count, arquivo=arquivo.filename or "")
 
@@ -155,7 +178,9 @@ async def upload_distribuicao(
     tmp_path: str | None = None
     try:
         tmp_path = await _persistir_em_tmp(arquivo)
-        registrar_bd(tmp_path, conn)
+        durable = _persistir_upload_permanente(tmp_path, 'bd')
+        tmp_path = None
+        registrar_bd(durable, conn)
         count = DistribuicaoRepository(conn).count()
     except ValueError as exc:
         raise HTTPException(
@@ -169,7 +194,6 @@ async def upload_distribuicao(
             detail=str(exc),
         ) from exc
     finally:
-        if tmp_path and os.path.exists(tmp_path):
-            os.remove(tmp_path)
+        _remover_se_existir(tmp_path)
 
     return DistribuicaoUploadResponse(count=count, arquivo=arquivo.filename or "")

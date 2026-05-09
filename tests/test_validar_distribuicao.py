@@ -14,7 +14,7 @@ from app.infrastructure.data import (
     obter_bd,
     obter_medicao,
     registrar_bd,
-    registrar_medicao,
+    registrar_medicao_arquivo,
 )
 from app.infrastructure.data.bootstrap import _normalizar_pct
 
@@ -107,7 +107,7 @@ def test_registrar_medicao_round_trip():
         ('01/04/2026', 'AUDITOR', 'CENTRAL', 1.0),
     ])
     conn = _mem_conn()
-    registrar_medicao(path, conn)
+    registrar_medicao_arquivo(path, conn)
     rows = obter_medicao(conn)
     assert len(rows) == 2
     assert rows[0]['data'] == '01/04/2026'
@@ -118,7 +118,7 @@ def test_registrar_medicao_round_trip():
 def test_registrar_medicao_normaliza_pct_escala_100():
     path = _make_medicao_xlsx([('01/04/2026', 'AUDITOR', 'CENTRAL', 100.0)])
     conn = _mem_conn()
-    registrar_medicao(path, conn)
+    registrar_medicao_arquivo(path, conn)
     rows = obter_medicao(conn)
     assert rows[0]['pct_cobranca'] == pytest.approx(1.0)
 
@@ -129,7 +129,7 @@ def test_registrar_medicao_aviso_escala_mista():
         ('01/04/2026', 'INSPETOR', 'HD', 100.0),
     ])
     conn = _mem_conn()
-    avisos = registrar_medicao(path, conn)
+    avisos, _ = registrar_medicao_arquivo(path, conn)
     assert any('AVISO_ESCALA_INDEFINIDA' in av for av in avisos)
 
 
@@ -139,8 +139,27 @@ def test_registrar_medicao_sem_aviso_escala_uniforme():
         ('01/04/2026', 'INSPETOR', 'HD', 0.5),
     ])
     conn = _mem_conn()
-    avisos = registrar_medicao(path, conn)
+    avisos, _ = registrar_medicao_arquivo(path, conn)
     assert not any('AVISO_ESCALA_INDEFINIDA' in av for av in avisos)
+
+
+def test_obter_medicao_arquivo_removido_levanta_erro(tmp_path):
+    """Se o arquivo registrado some do disco, obter_medicao falha terminal
+    com FileNotFoundError mencionando o caminho — não retorna [] silencioso."""
+    import os
+    path = _make_medicao_xlsx([('01/04/2026', 'AUDITOR', 'CENTRAL', 1.0)])
+    conn = _mem_conn()
+    registrar_medicao_arquivo(path, conn)
+    os.remove(path)
+    with pytest.raises(FileNotFoundError) as exc_info:
+        obter_medicao(conn)
+    assert path in str(exc_info.value)
+
+
+def test_obter_medicao_sem_registro_levanta_erro():
+    conn = _mem_conn()
+    with pytest.raises(FileNotFoundError):
+        obter_medicao(conn)
 
 
 def _bd(rows):

@@ -12,7 +12,10 @@ transação e faz commit. Os Repositories permanecem livres de commit.
 from __future__ import annotations
 
 import logging
+import os
 import sqlite3
+from collections.abc import Iterator
+from contextlib import closing, contextmanager
 from pathlib import Path
 
 import openpyxl
@@ -21,8 +24,8 @@ from app.domain.core import normalizar_data
 from app.infrastructure.data.registry import RegistryRepository
 from app.infrastructure.data.repositories.distribuicao import DistribuicaoRepository
 from app.infrastructure.data.repositories.ferias import FeriasRepository
-from app.infrastructure.data.repositories.medicao import MedicaoRepository
 from app.infrastructure.data.repositories.treinamentos import TreinamentosRepository
+from app.infrastructure.paths import uploads_dir
 
 logger = logging.getLogger(__name__)
 
@@ -43,44 +46,39 @@ def _normalizar_pct(value) -> float:
     return v / 100 if v > 1.0 else v
 
 
-def registrar_bd(path: str | Path, conn: sqlite3.Connection) -> None:
-    logger.info('registrar_bd: lendo %s', path)
+def _persistir_upload_permanente(origem_tmp: str | Path, tipo: str) -> Path:
+    """Promove um arquivo temporário a storage durável (data/uploads/<tipo>.xlsx).
+
+    Usa os.replace para overwrite atômico no mesmo filesystem. O caller é
+    responsável por garantir que `origem_tmp` esteja no mesmo filesystem
+    do destino (i.e. criar tmp em uploads_dir()).
+    """
+    destino = uploads_dir() / f'{tipo}.xlsx'
+    os.replace(str(origem_tmp), str(destino))
+    return destino
+
+
+@contextmanager
+def _abrir_aba_frequencia(
+    path: str | Path,
+) -> Iterator[tuple[object, dict[str, int], int]]:
+    """Abre o workbook da Medição em modo leitura, resolve o cabeçalho da
+    aba 'Frequencia' e produz `(worksheet, col_map, header_row_idx)`.
+
+    `header_row_idx` é 1-based (compatível com `min_row` do openpyxl) e
+    indica a linha onde o cabeçalho foi encontrado. Garante `wb.close()`
+    no `__exit__`, mesmo em early-return ou exceção do consumidor — evita
+    vazamento de file handle do openpyxl.
+    """
     wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
-    ws = wb.active
-    records: list[tuple] = []
-    header_skipped = False
-    for row in ws.iter_rows(values_only=True):
-        if not header_skipped:
-            header_skipped = True
-            continue
-        if len(row) < 4 or row[0] is None:
-            continue
-        funcao      = str(row[0]).strip().upper()
-        md_cobranca = str(row[1]).strip().upper() if row[1] is not None else ''
-        area        = str(row[2]).strip() if row[2] is not None else None
-        quantidade  = float(row[3]) if row[3] is not None else 0.0
-        records.append((funcao, md_cobranca, area, quantidade))
-    wb.close()
-    logger.info('registrar_bd: %d linhas extraídas', len(records))
-
-    DistribuicaoRepository(conn).salvar(records)
-    RegistryRepository(conn).upsert('bd', str(path))
-    conn.commit()
-
-
-def registrar_medicao(path: str | Path, conn: sqlite3.Connection) -> list[str]:
-    """Importa Medição/Frequencia para SQLite. Retorna lista de avisos."""
-    wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
-    ws = wb['Frequencia']
-
-    col_map: dict[str, int] | None = None
-    records: list[tuple] = []
-    tem_maior_1 = False
-    tem_menor_igual_1 = False
-    linhas_dados_scan = 0
-
-    for row in ws.iter_rows(values_only=True):
-        if col_map is None:
+    try:
+        ws = wb['Frequencia']
+        col_map: dict[str, int] | None = None
+        header_row_idx: int = 0
+        linhas_dados_scan = 0
+        row_idx = 0
+        for row in ws.iter_rows(values_only=True):
+            row_idx += 1
             if all(cell is None for cell in row):
                 continue
             linhas_dados_scan += 1
@@ -96,8 +94,32 @@ def registrar_medicao(path: str | Path, conn: sqlite3.Connection) -> list[str]:
                         candidate[field] = col_i
             if len(candidate) == len(_ALIASES_MEDICAO):
                 col_map = candidate
-            continue
+                header_row_idx = row_idx
+                break
+        if col_map is None:
+            raise ValueError(
+                'Cabeçalho da Medição não encontrado nas primeiras '
+                f'{_HEADER_SCAN_ROWS} linhas com dados. '
+                'Colunas esperadas: data, sg funcao, md cobranca, % cobrança'
+            )
+        yield ws, col_map, header_row_idx
+    finally:
+        wb.close()
 
+
+def _iter_linhas_dados(
+    ws,
+    col_map: dict[str, int],
+    header_row_idx: int,
+) -> Iterator[tuple[str, str, str, object]]:
+    """Itera linhas de dados da aba Frequencia (a partir de header+1),
+    normalizando data/funcao/md_cobranca.
+
+    Pula linhas sem matrícula útil (sg_funcao + md_cobranca obrigatórios).
+    Retorna `(data_str, sg_funcao_str, md_cobranca_str, pct_val_bruto)`;
+    a normalização de pct fica a cargo do consumidor.
+    """
+    for row in ws.iter_rows(min_row=header_row_idx + 1, values_only=True):
         n = len(row)
         data_val        = row[col_map['data']]         if col_map['data']         < n else None
         sg_funcao_val   = row[col_map['sg_funcao']]    if col_map['sg_funcao']    < n else None
@@ -114,24 +136,33 @@ def registrar_medicao(path: str | Path, conn: sqlite3.Connection) -> list[str]:
             continue
 
         data_str = normalizar_data(data_val)
+        yield data_str, sg_funcao_str, md_cobranca_str, pct_val
 
-        if pct_val is not None:
-            pv = float(pct_val)
-            if pv > 1.0:
-                tem_maior_1 = True
-            else:
-                tem_menor_igual_1 = True
 
-        records.append((data_str, sg_funcao_str, md_cobranca_str, _normalizar_pct(pct_val)))
+def ler_medicao_do_excel(path: str | Path) -> tuple[list[dict], list[str]]:
+    """Lê a aba Frequencia do Excel da medição e retorna (registros, avisos).
 
-    wb.close()
+    Não toca em SQLite. Cada registro: dict com chaves
+    `data, sg_funcao, md_cobranca, pct_cobranca` (pct normalizado para 0-1).
+    """
+    registros: list[dict] = []
+    tem_maior_1 = False
+    tem_menor_igual_1 = False
 
-    if col_map is None:
-        raise ValueError(
-            'Cabeçalho da Medição não encontrado nas primeiras '
-            f'{_HEADER_SCAN_ROWS} linhas com dados. '
-            'Colunas esperadas: data, sg funcao, md cobranca, % cobrança'
-        )
+    with _abrir_aba_frequencia(path) as (ws, col_map, header_row_idx):
+        for data_str, sg_funcao_str, md_cobranca_str, pct_val in _iter_linhas_dados(ws, col_map, header_row_idx):
+            if pct_val is not None:
+                pv = float(pct_val)
+                if pv > 1.0:
+                    tem_maior_1 = True
+                else:
+                    tem_menor_igual_1 = True
+            registros.append({
+                'data': data_str,
+                'sg_funcao': sg_funcao_str,
+                'md_cobranca': md_cobranca_str,
+                'pct_cobranca': _normalizar_pct(pct_val),
+            })
 
     avisos: list[str] = []
     if tem_maior_1 and tem_menor_igual_1:
@@ -140,26 +171,82 @@ def registrar_medicao(path: str | Path, conn: sqlite3.Connection) -> list[str]:
             'escalas mistas (alguns > 1.0, alguns ≤ 1.0). '
             'Normalização aplicada linha a linha.'
         )
+    return registros, avisos
 
-    MedicaoRepository(conn).salvar(records)
+
+def obter_mes_referencia_excel(path: str | Path) -> str | None:
+    """Retorna 'YYYY-MM' se todas as datas da medição pertencem ao mesmo mês.
+
+    Lê apenas o necessário para decidir: para na segunda data de mês distinto.
+    Datas inválidas/vazias são ignoradas.
+    """
+    mes_unico: str | None = None
+    with _abrir_aba_frequencia(path) as (ws, col_map, header_row_idx):
+        for data_str, _sg, _md, _pct in _iter_linhas_dados(ws, col_map, header_row_idx):
+            if not data_str or len(data_str) != 10:
+                continue
+            mes = f'{data_str[6:10]}-{data_str[3:5]}'
+            if mes_unico is None:
+                mes_unico = mes
+            elif mes != mes_unico:
+                return None
+    return mes_unico
+
+
+def registrar_bd(path: str | Path, conn: sqlite3.Connection) -> None:
+    logger.info('registrar_bd: lendo %s', path)
+    with closing(openpyxl.load_workbook(path, read_only=True, data_only=True)) as wb:
+        ws = wb.active
+        records: list[tuple] = []
+        header_skipped = False
+        for row in ws.iter_rows(values_only=True):
+            if not header_skipped:
+                header_skipped = True
+                continue
+            if len(row) < 4 or row[0] is None:
+                continue
+            funcao      = str(row[0]).strip().upper()
+            md_cobranca = str(row[1]).strip().upper() if row[1] is not None else ''
+            area        = str(row[2]).strip() if row[2] is not None else None
+            quantidade  = float(row[3]) if row[3] is not None else 0.0
+            records.append((funcao, md_cobranca, area, quantidade))
+    logger.info('registrar_bd: %d linhas extraídas', len(records))
+
+    DistribuicaoRepository(conn).salvar(records)
+    RegistryRepository(conn).upsert('bd', str(path))
+    conn.commit()
+
+
+def registrar_medicao_arquivo(
+    path: str | Path,
+    conn: sqlite3.Connection,
+) -> tuple[list[str], int]:
+    """Valida o Excel da medição e registra o caminho durável em registro_arquivos.
+
+    Não persiste o conteúdo em SQLite — leitura runtime via `obter_medicao(conn)`
+    re-lê o Excel apontado por `registro_arquivos['medicao']`.
+
+    Retorna `(avisos, total_registros)`. `path` deve ser durável; o caller
+    (config.py) garante via `_persistir_upload_permanente`.
+    """
+    registros, avisos = ler_medicao_do_excel(path)
     RegistryRepository(conn).upsert('medicao', str(path))
     conn.commit()
-    return avisos
+    return avisos, len(registros)
 
 
 def registrar_base_treinamentos(path: str | Path, conn: sqlite3.Connection) -> None:
     """Importa Base de Treinamentos para `catalogo_treinamentos`."""
     logger.info('registrar_base_treinamentos: lendo %s', path)
-    wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
     records: list[tuple] = []
-    for row in wb.active.iter_rows(min_row=2, values_only=True):
-        if not row[0]:
-            continue
-        nome = str(row[0]).strip().upper()
-        tipo_raw = str(row[1]).strip().lower() if row[1] else ''
-        tipo = 'nao_remunerado' if ('não' in tipo_raw or 'nao' in tipo_raw) else 'remunerado'
-        records.append((nome, tipo))
-    wb.close()
+    with closing(openpyxl.load_workbook(path, read_only=True, data_only=True)) as wb:
+        for row in wb.active.iter_rows(min_row=2, values_only=True):
+            if not row[0]:
+                continue
+            nome = str(row[0]).strip().upper()
+            tipo_raw = str(row[1]).strip().lower() if row[1] else ''
+            tipo = 'nao_remunerado' if ('não' in tipo_raw or 'nao' in tipo_raw) else 'remunerado'
+            records.append((nome, tipo))
     logger.info('registrar_base_treinamentos: %d treinamentos extraídos', len(records))
 
     TreinamentosRepository(conn).salvar(records)
@@ -174,20 +261,19 @@ def registrar_cobranca(path: str | Path, conn: sqlite3.Connection) -> None:
     senão 1 — alinha com o domínio de férias.
     """
     logger.info('registrar_cobranca: lendo %s', path)
-    wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
     records: list[tuple] = []
-    for row in wb.active.iter_rows(values_only=True):
-        if row[0] is None:
-            continue
-        sg_funcao = str(row[0]).strip().upper()
-        md_cobranca = (
-            str(row[1]).strip().upper() if len(row) > 1 and row[1] is not None else ''
-        )
-        if not sg_funcao:
-            continue
-        remunerado = 0 if md_cobranca == 'FÉRIAS S/ DESC' else 1
-        records.append((sg_funcao, md_cobranca, remunerado))
-    wb.close()
+    with closing(openpyxl.load_workbook(path, read_only=True, data_only=True)) as wb:
+        for row in wb.active.iter_rows(values_only=True):
+            if row[0] is None:
+                continue
+            sg_funcao = str(row[0]).strip().upper()
+            md_cobranca = (
+                str(row[1]).strip().upper() if len(row) > 1 and row[1] is not None else ''
+            )
+            if not sg_funcao:
+                continue
+            remunerado = 0 if md_cobranca == 'FÉRIAS S/ DESC' else 1
+            records.append((sg_funcao, md_cobranca, remunerado))
     logger.info('registrar_cobranca: %d linhas extraídas', len(records))
 
     FeriasRepository(conn).salvar(records)
@@ -200,7 +286,24 @@ def obter_bd(conn: sqlite3.Connection) -> list[dict]:
 
 
 def obter_medicao(conn: sqlite3.Connection) -> list[dict]:
-    return MedicaoRepository(conn).listar()
+    """Retorna os registros da medição re-lendo o Excel registrado.
+
+    Falha de forma terminal se: (a) nenhum arquivo registrado em
+    `registro_arquivos['medicao']`; (b) caminho registrado não existe em disco
+    (corrupção operacional, não estado vazio).
+    """
+    registro = RegistryRepository(conn).get('medicao')
+    if registro is None:
+        raise FileNotFoundError(
+            'Nenhum arquivo de medição registrado. Faça upload via '
+            '/api/config/medicao ou --registrar-medicao.'
+        )
+    caminho = registro['caminho']
+    if not Path(caminho).exists():
+        raise FileNotFoundError(
+            f'Arquivo de medição registrado não encontrado: {caminho}'
+        )
+    return ler_medicao_do_excel(caminho)[0]
 
 
 def obter_cobranca(conn: sqlite3.Connection) -> dict[str, str]:

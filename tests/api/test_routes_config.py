@@ -16,9 +16,21 @@ FIXTURES = Path(__file__).resolve().parents[1] / "fixtures"
 
 
 @pytest.fixture
-def client(tmp_path):
+def client(tmp_path, monkeypatch):
     from app.api.dependencies import get_conn
     from app.api.main import app
+
+    uploads = tmp_path / "uploads"
+    uploads.mkdir()
+    monkeypatch.setattr(
+        "app.infrastructure.paths.uploads_dir", lambda: uploads
+    )
+    monkeypatch.setattr(
+        "app.api.routes.config.uploads_dir", lambda: uploads
+    )
+    monkeypatch.setattr(
+        "app.infrastructure.data.bootstrap.uploads_dir", lambda: uploads
+    )
 
     db = tmp_path / "test.db"
     conectar(db).close()  # cria schema
@@ -134,7 +146,7 @@ def test_initial_data_expoe_modules_config_e_tables(client):
     assert initial["config"]["base_cobranca"]["ready"] is False
 
     assert set(initial["tables"]) == {
-        "medicao_frequencia", "catalogo_treinamentos", "bd_distribuicao",
+        "catalogo_treinamentos", "bd_distribuicao",
     }
     for present in initial["tables"].values():
         assert isinstance(present, bool)
@@ -221,3 +233,72 @@ def test_upload_cobranca_sem_arquivo_retorna_422(client):
 def test_upload_distribuicao_sem_arquivo_retorna_422(client):
     res = client.post("/api/config/distribuicao")
     assert res.status_code == 422
+
+
+def test_upload_medicao_persiste_arquivo_em_storage_duravel(client, tmp_path):
+    """Após upload, data/uploads/medicao.xlsx deve existir e o registro
+    apontar para esse caminho durável."""
+    res = client.post(
+        "/api/config/medicao",
+        files={"arquivo": ("medicao.xlsx", _xlsx_medicao_valido())},
+    )
+    assert res.status_code == 200, res.text
+    durable = tmp_path / "uploads" / "medicao.xlsx"
+    assert durable.exists()
+
+
+def test_upload_medicao_overwrite_atomico(client, tmp_path):
+    """Dois uploads consecutivos: data/uploads/medicao.xlsx reflete o segundo."""
+    client.post(
+        "/api/config/medicao",
+        files={"arquivo": ("a.xlsx", _xlsx_medicao_valido())},
+    )
+    res = client.post(
+        "/api/config/medicao",
+        files={"arquivo": ("b.xlsx", _xlsx_medicao_multi_mes())},
+    )
+    assert res.status_code == 200, res.text
+    initial = client.get("/api/initial-data").json()
+    assert initial["mes_referencia"] is None  # multi-mes
+
+
+def test_upload_medicao_corrompido_preserva_arquivo_anterior(client, tmp_path):
+    """Upload válido seguido de upload inválido: o arquivo durável
+    anterior permanece intacto, mes_referencia continua disponível."""
+    res_ok = client.post(
+        "/api/config/medicao",
+        files={"arquivo": ("ok.xlsx", _xlsx_medicao_valido())},
+    )
+    assert res_ok.status_code == 200
+    durable = tmp_path / "uploads" / "medicao.xlsx"
+    bytes_antes = durable.read_bytes()
+
+    res_bad = client.post(
+        "/api/config/medicao",
+        files={"arquivo": ("bad.xlsx", _xlsx_invalido())},
+    )
+    assert res_bad.status_code == 422
+
+    assert durable.exists()
+    assert durable.read_bytes() == bytes_antes
+    initial = client.get("/api/initial-data").json()
+    assert initial["measurement_status"] == "MEASUREMENT_READY"
+    assert initial["mes_referencia"] == "2026-01"
+
+
+def test_initial_data_arquivo_medicao_removido_logga_e_retorna_none(client, tmp_path, caplog):
+    """Se o arquivo registrado some do disco, mes_referencia degrada
+    para None e o evento é logado como erro operacional."""
+    import logging
+    res = client.post(
+        "/api/config/medicao",
+        files={"arquivo": ("medicao.xlsx", _xlsx_medicao_valido())},
+    )
+    assert res.status_code == 200
+    durable = tmp_path / "uploads" / "medicao.xlsx"
+    durable.unlink()
+
+    with caplog.at_level(logging.ERROR):
+        initial = client.get("/api/initial-data").json()
+    assert initial["measurement_status"] == "MEASUREMENT_MISSING"
+    assert initial["mes_referencia"] is None

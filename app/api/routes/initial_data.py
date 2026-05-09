@@ -23,13 +23,16 @@ Lógica de derivação (espelho do flowchart Mermaid):
     base_cobranca permanece efêmero (não persistido) → ready=false.
 
   tables:
-    Presença bruta de medicao_frequencia, catalogo_treinamentos, bd_distribuicao
-    em sqlite_master — usado pelo log de bootstrap da UI.
+    Presença bruta de catalogo_treinamentos e bd_distribuicao em sqlite_master
+    — usado pelo log de bootstrap da UI. Medição não é mais persistida em
+    SQLite; sua disponibilidade é avaliada via registro_arquivos.
 """
 
 from __future__ import annotations
 
+import logging
 import sqlite3
+from pathlib import Path
 
 from fastapi import APIRouter, Depends
 
@@ -44,15 +47,16 @@ from app.api.schemas.initial_data import (
 )
 from app.infrastructure.data import (
     DistribuicaoRepository,
-    MedicaoRepository,
     RegistryRepository,
     TreinamentosRepository,
+    obter_mes_referencia_excel,
 )
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-_TRACKED_TABLES = ("medicao_frequencia", "catalogo_treinamentos", "bd_distribuicao")
+_TRACKED_TABLES = ("catalogo_treinamentos", "bd_distribuicao")
 
 
 def _tabelas_presentes(conn: sqlite3.Connection) -> dict[str, bool]:
@@ -61,6 +65,21 @@ def _tabelas_presentes(conn: sqlite3.Connection) -> dict[str, bool]:
     ).fetchall()
     presentes = {r[0] for r in rows}
     return {t: t in presentes for t in _TRACKED_TABLES}
+
+
+def _derivar_mes_referencia(caminho: str) -> str | None:
+    try:
+        return obter_mes_referencia_excel(Path(caminho))
+    except FileNotFoundError:
+        logger.error(
+            "Arquivo de medição registrado ausente em disco: %s", caminho
+        )
+        return None
+    except Exception:
+        logger.exception(
+            "Falha ao derivar mes_referencia do Excel registrado: %s", caminho
+        )
+        return None
 
 
 @router.get("/api/initial-data", response_model=InitialDataResponse)
@@ -72,7 +91,7 @@ def get_initial_data(conn: sqlite3.Connection = Depends(get_conn)) -> InitialDat
     catalog_status = CatalogStatus.READY if catalog_ready else CatalogStatus.MISSING
 
     medicao_reg = registry.get("medicao")
-    measurement_ready = medicao_reg is not None
+    measurement_ready = medicao_reg is not None and Path(medicao_reg["caminho"]).exists()
     measurement_status = (
         MeasurementStatus.READY if measurement_ready else MeasurementStatus.MISSING
     )
@@ -84,7 +103,7 @@ def get_initial_data(conn: sqlite3.Connection = Depends(get_conn)) -> InitialDat
     )
 
     mes_referencia = (
-        MedicaoRepository(conn).mes_referencia() if measurement_ready else None
+        _derivar_mes_referencia(medicao_reg["caminho"]) if measurement_ready else None
     )
 
     distribuicao_ready = DistribuicaoRepository(conn).count() > 0
@@ -112,7 +131,7 @@ def get_initial_data(conn: sqlite3.Connection = Depends(get_conn)) -> InitialDat
     }
 
     bd_reg = registry.get("bd")
-    base_tre_reg = registry.get("base_treinamentos")
+    base_tre_reg = registry.get("treinamentos")
 
     config = {
         "base_cobranca": ConfigStatus(ready=False, name=None, saved_at=None),

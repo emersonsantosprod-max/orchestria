@@ -9,18 +9,13 @@ from __future__ import annotations
 import sqlite3
 
 _SCHEMA = """
+DROP TABLE IF EXISTS medicao_frequencia;
+
 CREATE TABLE IF NOT EXISTS bd_distribuicao (
     funcao      TEXT NOT NULL,
     md_cobranca TEXT NOT NULL,
     area        TEXT,
     quantidade  REAL NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS medicao_frequencia (
-    data         TEXT NOT NULL,
-    sg_funcao    TEXT NOT NULL,
-    md_cobranca  TEXT NOT NULL,
-    pct_cobranca REAL NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS catalogo_treinamentos (

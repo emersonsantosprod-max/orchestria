@@ -42,6 +42,13 @@ def logs_dir() -> Path:
     return root / 'logs'
 
 
+def uploads_dir() -> Path:
+    root = _exe_dir() if getattr(sys, 'frozen', False) else _project_root()
+    d = root / 'data' / 'uploads'
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
 def ui_dist_dir() -> Path:
     if getattr(sys, 'frozen', False):
         return _bundle_root() / 'app' / 'ui' / 'web' / 'dist'
