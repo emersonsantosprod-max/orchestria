@@ -39,7 +39,7 @@ _BASE_DIR = str(_project_root())
 ARQUIVO_ENTRADA = os.path.join(
     _BASE_DIR, 'data', 'entrada', 'Dstribuição Contratual do BD  - 2026.xlsx'
 )
-ARQUIVO_SAIDA = str(exports_dir() / 'distribuicao_contratual_normalizada.xlsx')
+ARQUIVO_SAIDA: str | None = None
 
 SEP_SECAO = '═' * 80
 SEP_LINHA = '─' * 70
@@ -130,7 +130,10 @@ def main() -> int:
     if not os.path.exists(ARQUIVO_ENTRADA):
         print(f"[ERRO] Arquivo de entrada não encontrado: {ARQUIVO_ENTRADA}")
         return 1
-    os.makedirs(os.path.dirname(ARQUIVO_SAIDA), exist_ok=True)
+    arquivo_saida = ARQUIVO_SAIDA or str(
+        exports_dir() / 'distribuicao_contratual_normalizada.xlsx'
+    )
+    os.makedirs(os.path.dirname(arquivo_saida), exist_ok=True)
     try:
         headers, data_rows, w_hdr = ler_xlsx_contratual(ARQUIVO_ENTRADA)
         col_map, w_cols = parse_distribuicao_cols(headers)
@@ -138,7 +141,7 @@ def main() -> int:
         normalized, raw_sums, atual, w_norm = normalizar_linhas(
             data_rows, col_map, sigla_col, funcao_col, atual_col)
         w_val = validar_distribuicao_cobranca(normalized, raw_sums, atual)
-        escrever_xlsx_normalizado(normalized, ARQUIVO_SAIDA)
+        escrever_xlsx_normalizado(normalized, arquivo_saida)
     except DistribuicaoContratualMalformadaError as e:
         print(f"[ERRO ESTRUTURAL] {e}")
         return 1
@@ -146,7 +149,7 @@ def main() -> int:
         print(f"[ERRO CRÍTICO] {e}")
         return 1
     all_inc = w_hdr + w_cols + w_norm + w_val
-    imprimir_relatorio(all_inc, ARQUIVO_ENTRADA, ARQUIVO_SAIDA, len(normalized))
+    imprimir_relatorio(all_inc, ARQUIVO_ENTRADA, arquivo_saida, len(normalized))
     return 1 if any(i['tipo'] in TIPOS_ERRO for i in all_inc) else 0
 
 
