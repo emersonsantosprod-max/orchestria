@@ -30,6 +30,7 @@ import LogPanel from './components/LogPanel.jsx';
 import Sidebar from './components/Sidebar.jsx';
 import SessionBlock from './components/SessionBlock.jsx';
 import ConfigCard from './components/ConfigCard.jsx';
+import ConfigView from './components/ConfigView.jsx';
 
 const BOOTSTRAP_MIN_MS = 1200;
 
@@ -340,7 +341,7 @@ function Main({ view, state, dispatch, blocked, fileRefs }) {
       <div style={{ overflow: 'auto', minWidth: 0 }}>
         {view === 'execucao'
           ? <ExecucaoView state={state} dispatch={dispatch} blocked={blocked} fileRefs={fileRefs} />
-          : <ConfigView   state={state} dispatch={dispatch} blocked={blocked} />}
+          : <ConfigView   state={state} dispatch={dispatch} blocked={blocked} fileRefs={fileRefs} configKeys={CONFIG_KEYS} />}
       </div>
       <LogPanel logs={state.logs} run={state.run} dispatch={dispatch} />
     </div>
@@ -478,28 +479,4 @@ function ModuleRow({ module, state, dispatch, blocked, fileRefs }) {
     </Card>
   );
 }
-
-function ConfigView({ state, dispatch, blocked }) {
-  const boot = state.bootstrapping;
-  return (
-    <div style={{ padding: '28px 32px 48px', maxWidth: 920 }}>
-      <Header title="Configuração" subtitle="Bases persistidas pelo backend. Independem da sessão de medição." />
-      {state.apiError && (
-        <ApiErrorBanner err={state.apiError} onDismiss={() => dispatch({ type: 'API_ERROR', error: null })} />
-      )}
-      <div style={{ display: 'grid', gap: 10 }}>
-        {boot
-          ? CONFIG_KEYS.map((c, i) => <ConfigRowSkeleton key={c.key} index={i} step={state.bootstrapStep} />)
-          : CONFIG_KEYS.map(c => (
-              <ConfigCard key={c.key} cfg={c} value={state.config[c.key]} dispatch={dispatch} disabled={blocked} />
-            ))}
-      </div>
-      <div style={{ marginTop: 24, fontSize: 12, color: 'var(--fg-muted)' }}>
-        Os arquivos enviados aqui são gravados no servidor e ficam disponíveis para os módulos de execução. Não dependem da medição ativa.
-      </div>
-    </div>
-  );
-}
-
-
 
