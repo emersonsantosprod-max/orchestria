@@ -307,6 +307,16 @@ def obter_medicao(conn: sqlite3.Connection) -> list[dict]:
     return ler_medicao_do_excel(caminho)[0]
 
 
+def obter_medicao_atual(conn: sqlite3.Connection) -> dict | None:
+    """Retorna o registro atual da medição em SQLite ({'caminho','importado_em'})
+    ou None se não houver upload registrado.
+
+    Distinto de `obter_medicao(conn)` — não relê o Excel; é o lookup
+    barato usado por gating (e.g., validação de mês na rota de catálogo).
+    """
+    return RegistryRepository(conn).get('medicao')
+
+
 def obter_cobranca(conn: sqlite3.Connection) -> dict[str, str]:
     return FeriasRepository(conn).obter_mapa()
 
