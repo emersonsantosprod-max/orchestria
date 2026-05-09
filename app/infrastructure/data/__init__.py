@@ -22,9 +22,7 @@ from app.infrastructure.data.bootstrap import (
     obter_medicao,
     obter_registro_arquivos,
     obter_tabela_treinamento,
-    popular_bd_se_vazio,
     popular_cobranca_se_vazio,
-    popular_treinamentos_se_vazio,
     registrar_base_treinamentos,
     registrar_bd,
     registrar_cobranca,
@@ -37,7 +35,6 @@ from app.infrastructure.data.repositories.ferias import FeriasRepository
 from app.infrastructure.data.repositories.medicao import MedicaoRepository
 from app.infrastructure.data.repositories.treinamentos import TreinamentosRepository
 from app.infrastructure.data.schema import create_schema
-from app.infrastructure.paths import bundled_distribuicao_xlsx, bundled_treinamentos_xlsx
 
 
 def conectar(path=None):
@@ -64,9 +61,5 @@ __all__ = [
     "obter_cobranca",
     "obter_tabela_treinamento",
     "obter_registro_arquivos",
-    "popular_bd_se_vazio",
-    "popular_treinamentos_se_vazio",
     "popular_cobranca_se_vazio",
-    "bundled_distribuicao_xlsx",
-    "bundled_treinamentos_xlsx",
 ]

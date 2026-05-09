@@ -9,7 +9,7 @@ test:
 	$(PYTHON) -m pytest -q
 
 lint:
-	$(PYTHON) -m ruff check app/ tests/ ui/
+	$(PYTHON) -m ruff check app/ tests/
 
 dev:
 	$(PYTHON) -m app.main

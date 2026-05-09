@@ -18,7 +18,7 @@ from PyInstaller.utils.hooks import collect_submodules
 
 _DIST_XLSX  = 'assets/distribuicao_contratual_normalizada.xlsx'
 _TRAIN_XLSX = 'assets/base_treinamentos.xlsx'
-_WEB_DIST   = 'ui/web/dist'
+_WEB_DIST   = 'app/ui/web/dist'
 
 _datas = []
 if os.path.exists(_DIST_XLSX):
@@ -38,11 +38,11 @@ else:
         "importada manualmente em runtime."
     )
 if os.path.isdir(_WEB_DIST):
-    _datas.append((_WEB_DIST, 'ui/web/dist'))
+    _datas.append((_WEB_DIST, 'app/ui/web/dist'))
 else:
     print(
         f"[spec] AVISO: '{_WEB_DIST}' ausente — rode `npm run build` em "
-        "ui/web/ antes de empacotar para que a SPA seja servida."
+        "app/ui/web/ antes de empacotar para que a SPA seja servida."
     )
 
 _uvicorn_hidden  = collect_submodules('uvicorn')

@@ -21,7 +21,6 @@ def test_fluxo_completo(tmp_path):
     db_file = str(tmp_path / "test.db")
 
     conn = data.conectar(db_file)
-    data.popular_bd_se_vazio(conn)
     data.registrar_base_treinamentos(base_tr, conn)
     try:
         res = service.executar_pipeline(

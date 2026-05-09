@@ -5,7 +5,7 @@ Responsabilidades:
   - Criar o app FastAPI
   - Aplicar schema SQLite uma única vez no boot (lifespan)
   - Registrar todas as rotas /api/*
-  - Servir ui/web/dist/ como StaticFiles (SPA React)
+  - Servir app/ui/web/dist/ como StaticFiles (SPA React)
 
 Regra: este módulo não contém lógica de negócio.
 """
@@ -22,7 +22,6 @@ from app.api.routes import atestado, config, distribuicao, ferias, initial_data,
 from app.infrastructure.data import (
     conectar,
     create_schema,
-    popular_bd_se_vazio,
     popular_cobranca_se_vazio,
 )
 from app.infrastructure.logging_config import setup_logging
@@ -40,7 +39,6 @@ async def lifespan(app: FastAPI):
     conn = conectar()
     try:
         create_schema(conn)
-        popular_bd_se_vazio(conn)
         popular_cobranca_se_vazio(conn)
         conn.commit()
     finally:
@@ -71,4 +69,4 @@ def health() -> dict[str, str]:
 if _UI_DIST.exists():
     app.mount("/", StaticFiles(directory=str(_UI_DIST), html=True), name="ui")
 else:
-    logger.warning("api.main: %s não encontrado — SPA não montada (rode `cd ui/web && npm run build`)", _UI_DIST)
+    logger.warning("api.main: %s não encontrado — SPA não montada (rode `cd app/ui/web && npm run build`)", _UI_DIST)

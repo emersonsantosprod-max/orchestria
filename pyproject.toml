@@ -46,11 +46,13 @@ exclude = ["tests*", "build*", "dist*", "venv*", "venv_win*", "baseline*", "scri
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
+cache_dir = "build/.pytest_cache"
 
 [tool.ruff]
 line-length = 110
 target-version = "py312"
 extend-exclude = ["build", "dist", "venv", ".venv", "__pycache__"]
+cache-dir = "build/.ruff_cache"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "SIM"]

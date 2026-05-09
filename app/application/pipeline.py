@@ -261,17 +261,21 @@ def executar_pipeline(
     inconst_validacao = []
     if validar_distribuicao:
         bd_records = data.obter_bd(conn)
-        if bd_records:
-            if faltantes_validacao:
-                inconst_validacao = [inconsistencia(
-                    origem='writer',
-                    erro=(
-                        "validar_distribuicao=True ignorado: medição sem colunas "
-                        + ", ".join(faltantes_validacao)
-                    ),
-                )]
-            else:
-                inconst_validacao = vdist.validar_para_dominio(bd_records, medicao_records)
+        if not bd_records:
+            inconst_validacao = [inconsistencia(
+                origem='writer',
+                erro="validar_distribuicao=True ignorado: bd_distribuicao vazia",
+            )]
+        elif faltantes_validacao:
+            inconst_validacao = [inconsistencia(
+                origem='writer',
+                erro=(
+                    "validar_distribuicao=True ignorado: medição sem colunas "
+                    + ", ".join(faltantes_validacao)
+                ),
+            )]
+        else:
+            inconst_validacao = vdist.validar_para_dominio(bd_records, medicao_records)
 
     return Resultado(
         processados=len(dados),

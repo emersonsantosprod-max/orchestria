@@ -60,39 +60,3 @@ def test_obter_tabela_treinamento_retorna_vazio_se_nao_registrada(conn):
     assert tabela == {}
 
 
-def test_popular_treinamentos_se_vazio_popula_tabela(tmp_path, conn, monkeypatch):
-    from pathlib import Path
-    xlsx = _make_base_treinamentos_xlsx(tmp_path, [
-        ["NR-10", "Remunerado", "8H"],
-        ["NR-35", "Não remunerado", "4H"],
-    ])
-    monkeypatch.setattr('app.infrastructure.data.bootstrap.bundled_treinamentos_xlsx', lambda: Path(xlsx))
-    result = data.popular_treinamentos_se_vazio(conn)
-    assert result is True
-    tabela = data.obter_tabela_treinamento(conn)
-    assert len(tabela) == 2
-
-
-def test_popular_treinamentos_se_vazio_idempotente_com_dados(tmp_path, conn, monkeypatch):
-    from pathlib import Path
-    xlsx = _make_base_treinamentos_xlsx(tmp_path, [["NR-10", "Remunerado", "8H"]])
-    monkeypatch.setattr('app.infrastructure.data.bootstrap.bundled_treinamentos_xlsx', lambda: Path(xlsx))
-    data.popular_treinamentos_se_vazio(conn)
-    result = data.popular_treinamentos_se_vazio(conn)
-    assert result is False
-
-
-def test_popular_treinamentos_se_vazio_idempotente_com_registro(tmp_path, conn, monkeypatch):
-    from pathlib import Path
-    xlsx = _make_base_treinamentos_xlsx(tmp_path, [["NR-10", "Remunerado", "8H"]])
-    monkeypatch.setattr('app.infrastructure.data.bootstrap.bundled_treinamentos_xlsx', lambda: Path(xlsx))
-    data.registrar_base_treinamentos(xlsx, conn)
-    result = data.popular_treinamentos_se_vazio(conn)
-    assert result is False
-
-
-def test_popular_treinamentos_se_vazio_sem_xlsx_bundled(tmp_path, conn, monkeypatch):
-    monkeypatch.setattr('app.infrastructure.data.bootstrap.bundled_treinamentos_xlsx', lambda: tmp_path / 'inexistente.xlsx')
-    result = data.popular_treinamentos_se_vazio(conn)
-    assert result is False
-    assert data.obter_tabela_treinamento(conn) == {}

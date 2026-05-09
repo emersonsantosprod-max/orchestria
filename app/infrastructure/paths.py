@@ -3,9 +3,6 @@ paths.py — resolução determinística de caminhos em dev e em builds PyInstal
 
 - `db_path()`           → local gravável do SQLite (<exe_dir>/data em builds;
                           raiz do projeto em dev). Nunca depende de CWD.
-- `bundled_distribuicao_xlsx()` → xlsx read-only empacotado via PyInstaller
-                                  `datas=`; em dev resolve para
-                                  `assets/distribuicao_contratual_normalizada.xlsx`.
 """
 
 from __future__ import annotations
@@ -45,19 +42,7 @@ def logs_dir() -> Path:
     return root / 'logs'
 
 
-def bundled_distribuicao_xlsx() -> Path:
-    if getattr(sys, 'frozen', False):
-        return _bundle_root() / 'assets' / 'distribuicao_contratual_normalizada.xlsx'
-    return _project_root() / 'assets' / 'distribuicao_contratual_normalizada.xlsx'
-
-
-def bundled_treinamentos_xlsx() -> Path:
-    if getattr(sys, 'frozen', False):
-        return _bundle_root() / 'assets' / 'base_treinamentos.xlsx'
-    return _project_root() / 'assets' / 'base_treinamentos.xlsx'
-
-
 def ui_dist_dir() -> Path:
     if getattr(sys, 'frozen', False):
-        return _bundle_root() / 'ui' / 'web' / 'dist'
-    return _project_root() / 'ui' / 'web' / 'dist'
+        return _bundle_root() / 'app' / 'ui' / 'web' / 'dist'
+    return _project_root() / 'app' / 'ui' / 'web' / 'dist'

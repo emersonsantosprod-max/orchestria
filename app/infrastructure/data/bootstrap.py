@@ -23,7 +23,6 @@ from app.infrastructure.data.repositories.distribuicao import DistribuicaoReposi
 from app.infrastructure.data.repositories.ferias import FeriasRepository
 from app.infrastructure.data.repositories.medicao import MedicaoRepository
 from app.infrastructure.data.repositories.treinamentos import TreinamentosRepository
-from app.infrastructure.paths import bundled_distribuicao_xlsx, bundled_treinamentos_xlsx
 
 logger = logging.getLogger(__name__)
 
@@ -214,44 +213,6 @@ def obter_tabela_treinamento(conn: sqlite3.Connection) -> dict[str, str]:
 
 def obter_registro_arquivos(conn: sqlite3.Connection) -> dict[str, dict]:
     return RegistryRepository(conn).get_all()
-
-
-def popular_bd_se_vazio(conn: sqlite3.Connection) -> bool:
-    """Bootstrap idempotente de bd_distribuicao a partir do xlsx empacotado."""
-    if DistribuicaoRepository(conn).count() > 0:
-        return False
-    if RegistryRepository(conn).get('bd') is not None:
-        return False
-    xlsx = bundled_distribuicao_xlsx()
-    if not xlsx.exists():
-        logger.info('popular_bd_se_vazio: xlsx empacotado ausente em %s', xlsx)
-        return False
-    try:
-        registrar_bd(xlsx, conn)
-    except Exception:
-        conn.rollback()
-        logger.exception('popular_bd_se_vazio: rollback após falha')
-        raise
-    return True
-
-
-def popular_treinamentos_se_vazio(conn: sqlite3.Connection) -> bool:
-    """Bootstrap idempotente de catalogo_treinamentos a partir do xlsx empacotado."""
-    if TreinamentosRepository(conn).count() > 0:
-        return False
-    if RegistryRepository(conn).get('treinamentos') is not None:
-        return False
-    xlsx = bundled_treinamentos_xlsx()
-    if not xlsx.exists():
-        logger.info('popular_treinamentos_se_vazio: xlsx empacotado ausente em %s', xlsx)
-        return False
-    try:
-        registrar_base_treinamentos(xlsx, conn)
-    except Exception:
-        conn.rollback()
-        logger.exception('popular_treinamentos_se_vazio: rollback após falha')
-        raise
-    return True
 
 
 def popular_cobranca_se_vazio(conn: sqlite3.Connection, xlsx: Path | str | None = None) -> bool:

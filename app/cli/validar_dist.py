@@ -13,7 +13,6 @@ from app.infrastructure.data import (
     obter_bd,
     obter_medicao,
     obter_registro_arquivos,
-    popular_bd_se_vazio,
     registrar_bd,
     registrar_medicao,
 )
@@ -45,7 +44,6 @@ def cmd_registrar_medicao(path_str: str, conn) -> int:
 
 
 def cmd_validar(conn) -> int:
-    popular_bd_se_vazio(conn)
     registros = obter_registro_arquivos(conn)
     if 'bd' not in registros:
         print('[ERRO] BD não registrado.', file=sys.stderr)

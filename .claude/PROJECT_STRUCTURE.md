@@ -45,15 +45,11 @@ Imports permitidos: stdlib, `app.domain.*`, `typing.Protocol`. Proibidos: `app.i
 - `app/cli/validar_consist.py` — comparador planilha original × processada.
 - `app/cli/validar_consist_comparar.py`, `app/cli/validar_consist_relatorio.py` — helpers.
 
-### `ui/web/` — frontend SPA (servido pelo FastAPI)
-- `ui/web/src/` — código-fonte React/Vite; build em `ui/web/dist/` (gitignored).
-- Backend HTTP: `app/api/main.py` (FastAPI); empacotado pelo `AutomacaoMedicao.spec` com `ui/web/dist/` como assets estáticos.
+### `app/ui/web/` — frontend SPA (servido pelo FastAPI)
+- `app/ui/web/src/` — código-fonte React/Vite; build em `app/ui/web/dist/` (gitignored).
+- Backend HTTP: `app/api/main.py` (FastAPI); empacotado pelo `AutomacaoMedicao.spec` com `app/ui/web/dist/` como assets estáticos.
 
 ### Recursos
-- `assets/distribuicao_contratual_normalizada.xlsx` — SSOT versionado; empacotada via PyInstaller `datas=`; source do bootstrap inicial do SQLite.
-- `assets/base_treinamentos.xlsx` — base de classificação de treinamentos; empacotada; source de `popular_treinamentos_se_vazio`.
-- `data/automacao.db` — SQLite gravável em `<exe_dir>/data/` (frozen) ou raiz do projeto (dev); resolvido via `paths.db_path()`.
-- `data/entrada/`, `data/saida/` — runtime; gitignored.
 - `logs/automacao.log` — log rotativo (1 MiB × 5 backups); via `paths.logs_dir()`.
 
 ### Tests
@@ -64,6 +60,6 @@ Imports permitidos: stdlib, `app.domain.*`, `typing.Protocol`. Proibidos: `app.i
 
 ### Tooling
 - `pyproject.toml` — `[tool.setuptools] packages` enumera todos os pacotes (incluindo `app.domain`, `app.application`, `app.application.services`, `app.infrastructure`, `app.infrastructure.adapters`).
-- `Makefile` — `make test` (pytest), `make lint` (ruff em `app/ tests/ ui/`), `make dev` (`python -m app.main`).
+- `Makefile` — `make test` (pytest), `make lint` (ruff em `app/ tests/`), `make dev` (`python -m app.main`).
 - `baseline/` — gitignored; `baseline_treinamento.xlsx` (golden output de Step 1) + `baseline_pytest.txt`. Regerado sob demanda.
 - `scripts/diff_medicao.py` — Layer 2 da validação; comparação célula a célula via openpyxl read-only.
