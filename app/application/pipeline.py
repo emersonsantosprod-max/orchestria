@@ -28,13 +28,12 @@ from app.application.services import validacao_distribuicao as vdist
 from app.application.services.lancar_treinamentos import LancarTreinamentosService
 from app.domain import atestado, ferias
 from app.domain.core import inconsistencia
-from app.domain.reference_month import mes_referencia_unico
 from app.domain.errors import (
     ArquivoAbertoError,
     ArquivoNaoEncontradoError,
     AutomacaoError,
-    PlanilhaInvalidaError,
 )
+from app.domain.reference_month import mes_referencia_unico
 from app.infrastructure import data, loaders
 from app.infrastructure import excel as writer
 from app.infrastructure.data import TreinamentosRepository
