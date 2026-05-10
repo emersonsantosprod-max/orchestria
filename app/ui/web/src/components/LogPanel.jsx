@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { RunDot } from './primitives.jsx';
 
-export default function LogPanel({ logs, run, dispatch }) {
+export default function LogPanel({ logs, run, dispatch, collapsed = false }) {
   const ref = useRef(null);
   const [follow, setFollow] = useState(true);
 
@@ -20,7 +20,9 @@ export default function LogPanel({ logs, run, dispatch }) {
   return (
     <aside className="log-panel" style={{
       background: 'var(--msv-subtom-chumbo)',
-      color: '#e8e8e8', display: 'flex', flexDirection: 'column',
+      color: '#e8e8e8',
+      display: collapsed ? 'none' : 'flex',
+      flexDirection: 'column',
       borderLeft: '1px solid #000',
       minHeight: 0,
     }}>
@@ -48,6 +50,17 @@ export default function LogPanel({ logs, run, dispatch }) {
             fontSize: 11,
           }}
         >Limpar</button>
+        <button
+          type="button"
+          onClick={() => dispatch({ type: 'LOGS_TOGGLE' })}
+          aria-label="Ocultar log"
+          title="Ocultar log"
+          style={{
+            background: 'transparent', border: '1px solid #3a3a3a', color: '#bababa',
+            padding: '4px 10px', borderRadius: 4, cursor: 'pointer', fontFamily: 'inherit',
+            fontSize: 14, lineHeight: 1, marginLeft: 6,
+          }}
+        >−</button>
       </div>
 
       <div ref={ref} onScroll={onScroll} style={{

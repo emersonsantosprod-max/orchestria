@@ -226,19 +226,38 @@ export default function App() {
 
 
 function Main({ view, setView, state, dispatch, blocked, fileRefs }) {
+  const collapsed = !!state.logsCollapsed;
   return (
     <div style={{
       display: 'grid',
-      gridTemplateColumns: '1fr 380px',
+      gridTemplateColumns: collapsed ? '1fr 0px' : '1fr 380px',
       gridTemplateRows: '1fr',
       minWidth: 0, minHeight: 0,
+      position: 'relative',
     }}>
       <div style={{ overflow: 'auto', minWidth: 0 }}>
         {view === 'execucao'
           ? <ExecucaoView state={state} dispatch={dispatch} blocked={blocked} fileRefs={fileRefs} setView={setView} />
-          : <ConfigView   state={state} dispatch={dispatch} blocked={blocked} fileRefs={fileRefs} configKeys={CONFIG_KEYS} />}
+          : <ConfigView   state={state} dispatch={dispatch} blocked={blocked} configKeys={CONFIG_KEYS} />}
       </div>
-      <LogPanel logs={state.logs} run={state.run} dispatch={dispatch} />
+      <LogPanel logs={state.logs} run={state.run} dispatch={dispatch} collapsed={collapsed} />
+      {collapsed && (
+        <button
+          type="button"
+          onClick={() => dispatch({ type: 'LOGS_TOGGLE' })}
+          aria-label="Mostrar log"
+          title="Mostrar log"
+          style={{
+            position: 'absolute', right: 18, bottom: 18,
+            background: 'var(--msv-chumbo)', color: '#fff',
+            border: 'none', borderRadius: 999,
+            padding: '10px 16px', fontSize: 12, fontWeight: 600,
+            letterSpacing: '0.04em', textTransform: 'uppercase',
+            cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
+            zIndex: 10,
+          }}
+        >Mostrar log</button>
+      )}
     </div>
   );
 }
