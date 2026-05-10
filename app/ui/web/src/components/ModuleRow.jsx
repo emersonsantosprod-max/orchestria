@@ -27,7 +27,6 @@ export default function ModuleRow({ module, state, dispatch, blocked, fileRefs }
     if (!canRun) return;
     dispatch({ type: 'RUN_START', action: module.id });
     const payload = {
-      medicao: fileRefs.medicao.current,
       relatorio: fileRefs.relatorios.current[module.id] || null,
     };
     API.run(module.id, payload).then(res => {

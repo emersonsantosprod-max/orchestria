@@ -20,7 +20,6 @@ from fastapi.staticfiles import StaticFiles
 
 from app.api.routes import (
     atestado,
-    config,
     distribuicao,
     ferias,
     initial_data,
@@ -62,7 +61,6 @@ app = FastAPI(
 )
 
 app.include_router(initial_data.router)
-app.include_router(config.router)
 app.include_router(registry.router)
 app.include_router(treinamentos.router)
 app.include_router(ferias.router)

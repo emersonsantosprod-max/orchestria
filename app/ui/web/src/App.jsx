@@ -50,54 +50,24 @@ async function fetchJSON(url, init) {
 
 
 // ─────────────────────────────────────────────────────────────
-// API — real backend (FastAPI in app/api/). Endpoints not yet implemented
-// degrade with RUN_NOT_IMPLEMENTED so the UI stays usable as routes land.
+// API — real backend (FastAPI in app/api/). Path-based registry após
+// Entrega 4a; medição e bases vêm de /api/registry/<tipo>. Execute
+// envia apenas o relatório do módulo (multipart) — backend lê medição
+// do registry pelo Conn.
 // ─────────────────────────────────────────────────────────────
-const CONFIG_ENDPOINTS = {
-  base_treinamentos: '/api/config/catalogo',
-};
-
 export const API = {
-  async loadMedicao(file) {
-    const fd = new FormData();
-    fd.append('arquivo', file);
-    await fetchJSON('/api/config/medicao', { method: 'POST', body: fd });
-    const initial = await fetchJSON('/api/initial-data');
-    return {
-      mes_referencia: initial.mes_referencia,
-      medicao: { name: file.name, size: file.size },
-    };
-  },
   initialData() { return fetchJSON('/api/initial-data'); },
 
-  run(action, { medicao, relatorio } = {}) {
+  run(action, { relatorio } = {}) {
     const cfg = ENDPOINTS[action];
     if (!cfg) {
       const err = new Error(`Endpoint /api/run/${action} ainda não implementado no backend.`);
       err.code = 'RUN_NOT_IMPLEMENTED';
       return Promise.reject(err);
     }
-    if (!medicao) {
-      const err = new Error('Carregue a medição antes de executar.');
-      err.code = 'SESSION_NOT_INITIALIZED';
-      return Promise.reject(err);
-    }
     const fd = new FormData();
-    fd.append('medicao', medicao);
     if (cfg.relatorioField && relatorio) fd.append(cfg.relatorioField, relatorio);
     return fetchJSON(cfg.url, { method: 'POST', body: fd });
-  },
-
-  async saveConfig(key, file) {
-    const url = CONFIG_ENDPOINTS[key];
-    if (!url) {
-      const err = new Error(`POST /api/config/${key} ainda não implementado no backend.`);
-      err.code = 'CONFIG_NOT_IMPLEMENTED';
-      throw err;
-    }
-    const fd = new FormData();
-    fd.append('arquivo', file);
-    return fetchJSON(url, { method: 'POST', body: fd });
   },
 };
 
