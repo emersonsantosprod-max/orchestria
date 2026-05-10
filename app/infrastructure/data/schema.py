@@ -34,6 +34,15 @@ CREATE TABLE IF NOT EXISTS registro_arquivos (
     caminho      TEXT NOT NULL,
     importado_em TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS base_tags (
+    sg_funcao   TEXT NOT NULL,
+    unidade     TEXT NOT NULL,
+    md_cobranca TEXT NOT NULL,
+    situacao    TEXT NOT NULL,
+    tag         TEXT NOT NULL,
+    PRIMARY KEY (sg_funcao, unidade, md_cobranca, situacao)
+);
 """
 
 

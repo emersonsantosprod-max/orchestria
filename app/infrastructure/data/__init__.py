@@ -35,6 +35,7 @@ from app.infrastructure.data.bootstrap import (
 )
 from app.infrastructure.data.connection import conectar as _conectar_raw
 from app.infrastructure.data.registry import RegistryRepository
+from app.infrastructure.data.repositories.base_tags import BaseTagsRepository
 from app.infrastructure.data.repositories.distribuicao import DistribuicaoRepository
 from app.infrastructure.data.repositories.ferias import FeriasRepository
 from app.infrastructure.data.repositories.treinamentos import TreinamentosRepository
@@ -51,6 +52,7 @@ def conectar(path=None):
 __all__ = [
     "conectar",
     "create_schema",
+    "BaseTagsRepository",
     "DistribuicaoRepository",
     "FeriasRepository",
     "TreinamentosRepository",
