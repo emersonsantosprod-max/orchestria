@@ -26,9 +26,9 @@ from tests.fixtures.ferias_factories import (
     build_col_map_sem,
     build_dado_ferias_aprovado_1,
     build_dado_ferias_periodo_invalido,
+    build_ferias_context,
     build_md_cobranca_index,
     build_sg_funcao_index,
-    mes_referencia_padrao,
 )
 
 
@@ -57,11 +57,14 @@ def _executar_misto():
         ('111', '02/04/2026'): 'X',
         ('222', '10/04/2026'): 'AJUD-CIVIL',
     })
-    base = build_base_cobranca({'AJUD-CIVIL': 'FÉRIAS S/ DESC'})
-    return ferias.gerar_updates_ferias(
-        dados, base, medicao, md, sg,
-        mes_referencia_padrao(), build_col_map(),
+    ctx = build_ferias_context(
+        base_cobranca=build_base_cobranca({'AJUD-CIVIL': 'FÉRIAS S/ DESC'}),
+        medicao_por_matricula=medicao,
+        md_cobranca_por_chave=md,
+        sg_funcao_por_chave=sg,
+        col_map=build_col_map(),
     )
+    return ferias.gerar_updates_ferias(dados, ctx)
 
 
 def test_retorno_eh_tupla_de_listas():
@@ -94,11 +97,9 @@ def test_toda_inconsistencia_tem_origem_ferias():
 
 @pytest.mark.parametrize('chave_omissa', ['situacao', 'md_cobranca', 'sg_funcao'])
 def test_col_map_incompleto_levanta_runtime_error(chave_omissa):
+    ctx = build_ferias_context(col_map=build_col_map_sem(chave_omissa))
     with pytest.raises(RuntimeError, match=chave_omissa):
-        ferias.gerar_updates_ferias(
-            [], build_base_cobranca(), {}, {}, {},
-            mes_referencia_padrao(), build_col_map_sem(chave_omissa),
-        )
+        ferias.gerar_updates_ferias([], ctx)
 
 
 def test_idempotencia_duas_execucoes_produzem_output_igual():

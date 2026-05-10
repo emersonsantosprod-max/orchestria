@@ -135,25 +135,3 @@ def test_chaves_diferentes_geram_inconsistencias_distintas():
     atus, incs = ferias.gerar_updates_ferias(dados2, ctx2)
     assert atus == []
     assert len(incs) == 2  # uma por chave normalizada distinta
-
-
-def test_assinatura_legacy_posicional_compativel():
-    """Pipeline antigo (assinatura posicional) ainda funciona."""
-    dados = [
-        build_dado_ferias_aprovado_1(linha=2, chapa='1.000111',
-                                     periodo='01/04/2026 a 01/04/2026'),
-    ]
-    medicao = {
-        '111': [(date(2026, 4, 1), '01/04/2026', [10])],
-    }
-    atus, _ = ferias.gerar_updates_ferias(
-        dados,
-        build_base_cobranca(),
-        medicao,
-        build_md_cobranca_index({('111', '01/04/2026'): 'PACOTE'}),
-        build_sg_funcao_index({('111', '01/04/2026'): 'X'}),
-        mes_referencia_padrao(),
-        build_col_map(),
-    )
-    assert len(atus) == 1
-    assert atus[0].tag is None

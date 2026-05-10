@@ -111,12 +111,7 @@ def _classificar(md_cob, sg_fun, base_cobranca):
 
 def gerar_updates_ferias(
     dados_ferias,
-    ctx_or_base=None,
-    medicao_por_matricula=None,
-    md_cobranca_por_chave=None,
-    sg_funcao_por_chave=None,
-    mes_referencia=None,
-    col_map=None,
+    ctx: FeriasContext,
 ) -> tuple[list[Update], list[Inconsistencia]]:
     """
     Retorna (atualizacoes, inconsistencias).
@@ -136,22 +131,7 @@ def gerar_updates_ferias(
     "feature inativa": Update.tag fica None e nenhuma inconsistência
     de tag é emitida — preserva compat enquanto a Base de Tags ainda
     não foi cadastrada na sessão.
-
-    Compat: aceita também a forma legada posicional
-    `(dados, base_cobranca, mpm, mdc, sg, mes, col_map)`. Migração
-    aditiva — caller novo passa FeriasContext.
     """
-    if isinstance(ctx_or_base, FeriasContext):
-        ctx = ctx_or_base
-    else:
-        ctx = FeriasContext(
-            base_cobranca=ctx_or_base or {},
-            medicao_por_matricula=medicao_por_matricula or {},
-            md_cobranca_por_chave=md_cobranca_por_chave or {},
-            sg_funcao_por_chave=sg_funcao_por_chave or {},
-            mes_referencia=mes_referencia,
-            col_map=col_map or {},
-        )
     base_cobranca = ctx.base_cobranca
     medicao_por_matricula = ctx.medicao_por_matricula
     md_cobranca_por_chave = ctx.md_cobranca_por_chave

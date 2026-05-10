@@ -5,6 +5,7 @@ from datetime import date
 from app.domain import ferias
 from app.domain.core import Update
 from app.infrastructure import excel as writer
+from tests.fixtures.ferias_factories import build_ferias_context
 
 
 def _col_map_minimo():
@@ -24,16 +25,14 @@ def test_regressao_ferias_direto_com_observacao():
         'p1': '06/04/2026 a 05/05/2026', 's1': 'Aprovado',
         'p2': None, 's2': None,
     }]
-    medicao_por_mat = {
-        '248649': [(date(2026, 4, 6), '06/04/2026', [2282])],
-    }
-    md_cob = {('248649', '06/04/2026'): 'ADICIONAL'}
-    sg_fun = {('248649', '06/04/2026'): 'SOLD-I'}
-
-    atus, incs = ferias.gerar_updates_ferias(
-        dados, {}, medicao_por_mat, md_cob, sg_fun,
-        date(2026, 4, 1), _col_map_minimo(),
+    ctx = build_ferias_context(
+        medicao_por_matricula={'248649': [(date(2026, 4, 6), '06/04/2026', [2282])]},
+        md_cobranca_por_chave={('248649', '06/04/2026'): 'ADICIONAL'},
+        sg_funcao_por_chave={('248649', '06/04/2026'): 'SOLD-I'},
+        col_map=_col_map_minimo(),
     )
+
+    atus, incs = ferias.gerar_updates_ferias(dados, ctx)
 
     assert incs == []
     assert len(atus) == 1
@@ -68,15 +67,15 @@ def test_ferias_sd_emite_observacao_com_sufixo():
         'p1': '01/04/2026 a 03/04/2026', 's1': 'Aprovado',
         'p2': None, 's2': None,
     }]
-    medicao_por_mat = {'111': [(date(2026, 4, 1), '01/04/2026', [10])]}
-    md_cob = {('111', '01/04/2026'): 'CENTRAL'}
-    sg_fun = {('111', '01/04/2026'): 'AJUD-CIVIL'}
-    base_cob = {'AJUD-CIVIL': 'FÉRIAS S/ DESC'}
-
-    atus, incs = ferias.gerar_updates_ferias(
-        dados, base_cob, medicao_por_mat, md_cob, sg_fun,
-        date(2026, 4, 1), _col_map_minimo(),
+    ctx = build_ferias_context(
+        base_cobranca={'AJUD-CIVIL': 'FÉRIAS S/ DESC'},
+        medicao_por_matricula={'111': [(date(2026, 4, 1), '01/04/2026', [10])]},
+        md_cobranca_por_chave={('111', '01/04/2026'): 'CENTRAL'},
+        sg_funcao_por_chave={('111', '01/04/2026'): 'AJUD-CIVIL'},
+        col_map=_col_map_minimo(),
     )
+
+    atus, incs = ferias.gerar_updates_ferias(dados, ctx)
     assert incs == []
     assert atus[0].situacao == 'FÉRIAS S/ DESC'
     assert atus[0].observacao == '01/04 a 03/04 - FÉRIAS (NÃO DESCONTA)'
@@ -89,15 +88,15 @@ def test_ferias_normal_emite_observacao_sem_sufixo():
         'p1': '01/04/2026 a 03/04/2026', 's1': 'Aprovado',
         'p2': None, 's2': None,
     }]
-    medicao_por_mat = {'111': [(date(2026, 4, 1), '01/04/2026', [10])]}
-    md_cob = {('111', '01/04/2026'): 'CENTRAL'}
-    sg_fun = {('111', '01/04/2026'): 'ARTIF'}
-    base_cob = {'ARTIF': 'FÉRIAS'}
-
-    atus, _ = ferias.gerar_updates_ferias(
-        dados, base_cob, medicao_por_mat, md_cob, sg_fun,
-        date(2026, 4, 1), _col_map_minimo(),
+    ctx = build_ferias_context(
+        base_cobranca={'ARTIF': 'FÉRIAS'},
+        medicao_por_matricula={'111': [(date(2026, 4, 1), '01/04/2026', [10])]},
+        md_cobranca_por_chave={('111', '01/04/2026'): 'CENTRAL'},
+        sg_funcao_por_chave={('111', '01/04/2026'): 'ARTIF'},
+        col_map=_col_map_minimo(),
     )
+
+    atus, _ = ferias.gerar_updates_ferias(dados, ctx)
     assert atus[0].situacao == 'FÉRIAS'
     assert atus[0].observacao == '01/04 a 03/04 - FÉRIAS'
     assert atus[0].sobrescrever_obs is True
@@ -110,16 +109,14 @@ def test_rateio_uma_data_multiplas_linhas_atualizadas():
         'p1': '01/04/2026 a 01/04/2026', 's1': 'Aprovado',
         'p2': None, 's2': None,
     }]
-    medicao_por_mat = {
-        '111': [(date(2026, 4, 1), '01/04/2026', [100, 200, 300])],
-    }
-    md_cob = {('111', '01/04/2026'): 'ADICIONAL'}
-    sg_fun = {('111', '01/04/2026'): 'X'}
-
-    atus, incs = ferias.gerar_updates_ferias(
-        dados, {}, medicao_por_mat, md_cob, sg_fun,
-        date(2026, 4, 1), _col_map_minimo(),
+    ctx = build_ferias_context(
+        medicao_por_matricula={'111': [(date(2026, 4, 1), '01/04/2026', [100, 200, 300])]},
+        md_cobranca_por_chave={('111', '01/04/2026'): 'ADICIONAL'},
+        sg_funcao_por_chave={('111', '01/04/2026'): 'X'},
+        col_map=_col_map_minimo(),
     )
+
+    atus, incs = ferias.gerar_updates_ferias(dados, ctx)
     assert incs == []
     assert sorted(a.row for a in atus) == [100, 200, 300]
     assert all(a.situacao == 'FÉRIAS' for a in atus)
@@ -133,20 +130,20 @@ def test_observacao_usa_periodo_original_nao_clipped():
         'p1': '28/03/2026 a 02/04/2026', 's1': 'Aprovado',
         'p2': None, 's2': None,
     }]
-    medicao_por_mat = {
-        '111': [
-            (date(2026, 4, 1), '01/04/2026', [10]),
-            (date(2026, 4, 2), '02/04/2026', [11]),
-        ],
-    }
-    md_cob = {('111', '01/04/2026'): 'CENTRAL', ('111', '02/04/2026'): 'CENTRAL'}
-    sg_fun = {('111', '01/04/2026'): 'X', ('111', '02/04/2026'): 'X'}
-    base_cob = {'X': 'FÉRIAS'}
-
-    atus, _ = ferias.gerar_updates_ferias(
-        dados, base_cob, medicao_por_mat, md_cob, sg_fun,
-        date(2026, 4, 1), _col_map_minimo(),
+    ctx = build_ferias_context(
+        base_cobranca={'X': 'FÉRIAS'},
+        medicao_por_matricula={
+            '111': [
+                (date(2026, 4, 1), '01/04/2026', [10]),
+                (date(2026, 4, 2), '02/04/2026', [11]),
+            ],
+        },
+        md_cobranca_por_chave={('111', '01/04/2026'): 'CENTRAL', ('111', '02/04/2026'): 'CENTRAL'},
+        sg_funcao_por_chave={('111', '01/04/2026'): 'X', ('111', '02/04/2026'): 'X'},
+        col_map=_col_map_minimo(),
     )
+
+    atus, _ = ferias.gerar_updates_ferias(dados, ctx)
     assert all(a.observacao == '28/03 a 02/04 - FÉRIAS' for a in atus)
 
 

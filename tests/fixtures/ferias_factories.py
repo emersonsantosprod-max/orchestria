@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from datetime import date
 
+from app.domain.ferias import FeriasContext
+
 
 def build_dado_ferias_aprovado_1(linha=2, chapa='1.000111',
                                  periodo='01/04/2026 a 03/04/2026'):
@@ -85,3 +87,23 @@ def build_col_map_sem(*chaves):
 
 def mes_referencia_padrao():
     return date(2026, 4, 1)
+
+
+def build_ferias_context(**overrides) -> FeriasContext:
+    """FeriasContext default para testes.
+
+    Defaults: dicts vazios, mes_referencia = 1º de abril/2026,
+    col_map = build_col_map(). Aceita override de qualquer um dos 8 campos.
+    """
+    defaults = {
+        'base_cobranca': {},
+        'medicao_por_matricula': {},
+        'md_cobranca_por_chave': {},
+        'sg_funcao_por_chave': {},
+        'unidade_por_chave': {},
+        'base_tags_por_chave': {},
+        'mes_referencia': mes_referencia_padrao(),
+        'col_map': build_col_map(),
+    }
+    defaults.update(overrides)
+    return FeriasContext(**defaults)

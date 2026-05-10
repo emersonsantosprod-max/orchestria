@@ -5,6 +5,7 @@ from datetime import date
 import pytest
 
 from app.domain import ferias
+from tests.fixtures.ferias_factories import build_ferias_context
 
 
 def _col_map_minimo():
@@ -21,24 +22,24 @@ def test_intersecao_parcial_mes_anterior():
         'p1': '28/03/2026 a 02/04/2026', 's1': 'Aprovado',
         'p2': None, 's2': None,
     }]
-    base_cob = {'ELET-IV': 'NORMAL'}
-    medicao_por_mat = {
-        '95585': [
-            (date(2026, 3, 30), '30/03/2026', [10]),
-            (date(2026, 4, 1),  '01/04/2026', [20]),
-            (date(2026, 4, 2),  '02/04/2026', [21]),
-            (date(2026, 4, 3),  '03/04/2026', [22]),
-        ],
-    }
-    md_cob = {('95585', '01/04/2026'): 'CENTRAL',
-              ('95585', '02/04/2026'): 'CENTRAL'}
-    sg_fun = {('95585', '01/04/2026'): 'ELET-IV',
-              ('95585', '02/04/2026'): 'ELET-IV'}
-
-    atus, incs = ferias.gerar_updates_ferias(
-        dados, base_cob, medicao_por_mat, md_cob, sg_fun,
-        date(2026, 4, 1), _col_map_minimo(),
+    ctx = build_ferias_context(
+        base_cobranca={'ELET-IV': 'NORMAL'},
+        medicao_por_matricula={
+            '95585': [
+                (date(2026, 3, 30), '30/03/2026', [10]),
+                (date(2026, 4, 1),  '01/04/2026', [20]),
+                (date(2026, 4, 2),  '02/04/2026', [21]),
+                (date(2026, 4, 3),  '03/04/2026', [22]),
+            ],
+        },
+        md_cobranca_por_chave={('95585', '01/04/2026'): 'CENTRAL',
+                               ('95585', '02/04/2026'): 'CENTRAL'},
+        sg_funcao_por_chave={('95585', '01/04/2026'): 'ELET-IV',
+                             ('95585', '02/04/2026'): 'ELET-IV'},
+        col_map=_col_map_minimo(),
     )
+
+    atus, incs = ferias.gerar_updates_ferias(dados, ctx)
     assert incs == []
     rows = sorted(a.row for a in atus)
     assert rows == [20, 21]
@@ -53,11 +54,11 @@ def test_periodo_fora_do_mes_skip_silencioso():
         'p1': '01/05/2026 a 03/05/2026', 's1': 'Aprovado',
         'p2': None, 's2': None,
     }]
-    medicao_por_mat = {'111': [(date(2026, 4, 1), '01/04/2026', [10])]}
-    atus, incs = ferias.gerar_updates_ferias(
-        dados, {}, medicao_por_mat, {}, {},
-        date(2026, 4, 1), _col_map_minimo()
+    ctx = build_ferias_context(
+        medicao_por_matricula={'111': [(date(2026, 4, 1), '01/04/2026', [10])]},
+        col_map=_col_map_minimo(),
     )
+    atus, incs = ferias.gerar_updates_ferias(dados, ctx)
     assert atus == []
     assert incs == []
 
@@ -69,9 +70,8 @@ def test_ferias_sem_aprovacao():
         'p1': '01/04/2026 a 03/04/2026', 's1': 'Pendente',
         'p2': '01/05/2026 a 03/05/2026', 's2': 'Negado',
     }]
-    atus, incs = ferias.gerar_updates_ferias(
-        dados, {}, {}, {}, {}, date(2026, 4, 1), _col_map_minimo()
-    )
+    ctx = build_ferias_context(col_map=_col_map_minimo())
+    atus, incs = ferias.gerar_updates_ferias(dados, ctx)
     assert atus == []
     assert incs == []
 
@@ -88,9 +88,8 @@ def test_periodo_invalido(periodo):
         'p1': periodo, 's1': 'Aprovado',
         'p2': None, 's2': None,
     }]
-    atus, incs = ferias.gerar_updates_ferias(
-        dados, {}, {}, {}, {}, date(2026, 4, 1), _col_map_minimo()
-    )
+    ctx = build_ferias_context(col_map=_col_map_minimo())
+    atus, incs = ferias.gerar_updates_ferias(dados, ctx)
     assert atus == []
     assert len(incs) == 1
     assert incs[0].erro == 'período inválido'
@@ -103,9 +102,8 @@ def test_matricula_nao_encontrada_uma_vez():
         'p1': '01/04/2026 a 30/04/2026', 's1': 'Aprovado',
         'p2': None, 's2': None,
     }]
-    atus, incs = ferias.gerar_updates_ferias(
-        dados, {}, {}, {}, {}, date(2026, 4, 1), _col_map_minimo()
-    )
+    ctx = build_ferias_context(col_map=_col_map_minimo())
+    atus, incs = ferias.gerar_updates_ferias(dados, ctx)
     assert atus == []
     assert len(incs) == 1
     assert incs[0].erro == 'matrícula não encontrada'
@@ -118,18 +116,18 @@ def test_sg_dedup_por_matricula():
         'p1': '01/04/2026 a 30/04/2026', 's1': 'Aprovado',
         'p2': None, 's2': None,
     }]
-    medicao_por_mat = {
-        '111': [
-            (date(2026, 4, d), f'{d:02d}/04/2026', [10 + d])
-            for d in range(1, 6)
-        ],
-    }
-    md_cob = {('111', f'{d:02d}/04/2026'): 'CENTRAL' for d in range(1, 6)}
-    sg_fun = {('111', f'{d:02d}/04/2026'): 'X-INEXISTENTE' for d in range(1, 6)}
-    atus, incs = ferias.gerar_updates_ferias(
-        dados, {}, medicao_por_mat, md_cob, sg_fun,
-        date(2026, 4, 1), _col_map_minimo()
+    ctx = build_ferias_context(
+        medicao_por_matricula={
+            '111': [
+                (date(2026, 4, d), f'{d:02d}/04/2026', [10 + d])
+                for d in range(1, 6)
+            ],
+        },
+        md_cobranca_por_chave={('111', f'{d:02d}/04/2026'): 'CENTRAL' for d in range(1, 6)},
+        sg_funcao_por_chave={('111', f'{d:02d}/04/2026'): 'X-INEXISTENTE' for d in range(1, 6)},
+        col_map=_col_map_minimo(),
     )
+    atus, incs = ferias.gerar_updates_ferias(dados, ctx)
     assert atus == []
     assert len(incs) == 1
     assert incs[0].erro == 'sg função não classificada'
@@ -141,8 +139,9 @@ def test_pre_flight_colunas_obrigatorias(col_ausente):
     col_map = _col_map_minimo()
     del col_map[col_ausente]
 
+    ctx = build_ferias_context(col_map=col_map)
     with pytest.raises(RuntimeError, match='colunas obrigatórias'):
-        ferias.gerar_updates_ferias([], {}, {}, {}, {}, date(2026, 4, 1), col_map)
+        ferias.gerar_updates_ferias([], ctx)
 
 
 def test_md_cobranca_direto_com_observacao():
@@ -152,14 +151,14 @@ def test_md_cobranca_direto_com_observacao():
         'p1': '01/04/2026 a 03/04/2026', 's1': 'Aprovado',
         'p2': None, 's2': None,
     }]
-    medicao_por_mat = {'111': [(date(2026, 4, 1), '01/04/2026', [10])]}
-    md_cob = {('111', '01/04/2026'): 'PACOTE'}
-    sg_fun = {('111', '01/04/2026'): 'ELET-IV'}
-
-    atus, incs = ferias.gerar_updates_ferias(
-        dados, {}, medicao_por_mat, md_cob, sg_fun,
-        date(2026, 4, 1), _col_map_minimo(),
+    ctx = build_ferias_context(
+        medicao_por_matricula={'111': [(date(2026, 4, 1), '01/04/2026', [10])]},
+        md_cobranca_por_chave={('111', '01/04/2026'): 'PACOTE'},
+        sg_funcao_por_chave={('111', '01/04/2026'): 'ELET-IV'},
+        col_map=_col_map_minimo(),
     )
+
+    atus, incs = ferias.gerar_updates_ferias(dados, ctx)
     assert incs == []
     assert len(atus) == 1
     assert atus[0].situacao == 'FÉRIAS'
