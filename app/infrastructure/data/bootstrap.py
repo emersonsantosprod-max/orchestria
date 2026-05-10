@@ -21,8 +21,10 @@ import openpyxl
 
 from app.domain.core import normalizar_data
 from app.domain.errors import PlanilhaInvalidaError
+from app.domain.normalizacao import normalizar
 from app.domain.reference_month import mes_referencia_unico
 from app.infrastructure.data.registry import RegistryRepository
+from app.infrastructure.data.repositories.base_tags import BaseTagsRepository
 from app.infrastructure.data.repositories.distribuicao import DistribuicaoRepository
 from app.infrastructure.data.repositories.ferias import FeriasRepository
 from app.infrastructure.data.repositories.treinamentos import TreinamentosRepository
@@ -334,6 +336,50 @@ def registrar_cobranca(path: str | Path, conn: sqlite3.Connection) -> None:
 
     FeriasRepository(conn).salvar(records)
     RegistryRepository(conn).upsert('cobranca', str(path))
+    conn.commit()
+
+
+def registrar_base_tags(path: str | Path, conn: sqlite3.Connection) -> None:
+    """Importa Base de Tags em `base_tags`.
+
+    Esquema esperado (5 colunas, header opcional na linha 1):
+      sg_funcao | unidade | md_cobranca | situacao | tag
+
+    Cada chave passa por `normalizar` (NFKD + accent-fold + UPPER)
+    antes de inserção. Tag é armazenada já normalizada para que o
+    lookup em runtime use chave canônica vs. tag canônica.
+
+    Levanta PlanilhaInvalidaError se a planilha não tiver linhas
+    válidas (5 colunas com chaves não vazias).
+    """
+    logger.info('registrar_base_tags: lendo %s', path)
+    records: list[tuple] = []
+    seen: set[tuple[str, str, str, str]] = set()
+    with closing(openpyxl.load_workbook(path, read_only=True, data_only=True)) as wb:
+        for row_idx, row in enumerate(wb.active.iter_rows(values_only=True), start=1):
+            if row is None or len(row) < 5:
+                continue
+            sg_raw, un_raw, md_raw, sit_raw, tag_raw = row[:5]
+            sg = normalizar(sg_raw)
+            un = normalizar(un_raw)
+            md = normalizar(md_raw)
+            sit = normalizar(sit_raw)
+            tag = normalizar(tag_raw)
+            if row_idx == 1 and tag == 'TAG':
+                continue
+            if not (sg and un and md and sit and tag):
+                continue
+            chave = (sg, un, md, sit)
+            if chave in seen:
+                continue
+            seen.add(chave)
+            records.append((sg, un, md, sit, tag))
+    logger.info('registrar_base_tags: %d linhas extraídas', len(records))
+    if not records:
+        raise PlanilhaInvalidaError('Base de Tags sem dados')
+
+    BaseTagsRepository(conn).salvar(records)
+    RegistryRepository(conn).upsert('tags', str(path))
     conn.commit()
 
 
