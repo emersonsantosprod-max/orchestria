@@ -21,6 +21,8 @@ import LogPanel from './components/LogPanel.jsx';
 import Sidebar from './components/Sidebar.jsx';
 import ConfigView from './components/ConfigView.jsx';
 import ExecucaoView from './components/ExecucaoView.jsx';
+import { reducer, initialState } from './modules/lifecycle/reducer.js';
+import { getRunBlockReason as _gatingGetRunBlockReason } from './modules/gating/index.js';
 
 const BOOTSTRAP_MIN_MS = 1200;
 
@@ -46,76 +48,6 @@ async function fetchJSON(url, init) {
   return r.json();
 }
 
-// ─────────────────────────────────────────────────────────────
-// STATE MODEL
-// ─────────────────────────────────────────────────────────────
-const initialState = {
-  bootstrapping: true,
-  bootstrapStep: 'session',  // 'session' | 'config' | 'modules' | 'done'
-  session: { active: false, mes_referencia: null, medicao: null, loadedAt: null },
-  run: { lock: false, action: null, startedAt: null },
-  modules: {
-    treinamentos:  {},
-    ferias:        {},
-    atestados:     {},
-    'validar-hr':  {},
-    'validar-dist':{},
-  },
-  modulesMeta: {},  // { [id]: { enabled, reason } } — backend gating, source of truth
-  config: {},
-  logs: [],
-  apiError: null,
-};
-
-function reducer(state, ev) {
-  switch (ev.type) {
-    case 'BOOTSTRAP_STEP':
-      return { ...state, bootstrapStep: ev.step };
-    case 'BOOTSTRAP_DONE':
-      return {
-        ...state,
-        bootstrapping: false,
-        bootstrapStep: 'done',
-        session: ev.session ?? state.session,
-        modulesMeta: ev.modulesMeta ?? state.modulesMeta,
-        config: ev.config ?? state.config,
-      };
-    case 'SESSION_LOADED':
-      return { ...state, session: { active: true, mes_referencia: ev.mes, medicao: ev.medicao, loadedAt: new Date().toISOString() }, apiError: null };
-    case 'SESSION_CLEARED':
-      return { ...state, session: initialState.session, modules: initialState.modules };
-    case 'RUN_START':
-      return { ...state, run: { lock: true, action: ev.action, startedAt: Date.now() }, apiError: null };
-    case 'RUN_END_OK':
-      return {
-        ...state,
-        run: initialState.run,
-        modules: ev.module
-          ? { ...state.modules, [ev.module]: { ...state.modules[ev.module], lastRun: { ok: true, at: new Date().toISOString(), summary: ev.summary, output: ev.output || null } } }
-          : state.modules,
-      };
-    case 'RUN_END_ERR':
-      return {
-        ...state,
-        run: initialState.run,
-        apiError: ev.error,
-        modules: ev.module
-          ? { ...state.modules, [ev.module]: { ...state.modules[ev.module], lastRun: { ok: false, at: new Date().toISOString(), error: ev.error.code } } }
-          : state.modules,
-      };
-    case 'MODULE_RELATORIO':
-      return { ...state, modules: { ...state.modules, [ev.module]: { ...state.modules[ev.module], relatorio: ev.file } } };
-    case 'CONFIG_SAVED':
-      return { ...state, config: { ...state.config, [ev.key]: { name: ev.file.name, savedAt: new Date().toISOString() } } };
-    case 'LOG':
-      return { ...state, logs: [...state.logs.slice(-499), ev.entry] };
-    case 'LOGS_CLEAR':
-      return { ...state, logs: [] };
-    case 'API_ERROR':
-      return { ...state, apiError: ev.error };
-    default: return state;
-  }
-}
 
 // ─────────────────────────────────────────────────────────────
 // API — real backend (FastAPI in app/api/). Endpoints not yet implemented
@@ -243,29 +175,8 @@ const CONFIG_KEYS = [
   { key: 'bd_distribuicao',   label: 'BD Distribuição',      hint: 'SQLite. Requerido para Validar Dist.',     accept: '.sqlite,.db' },
 ];
 
-// Pure helper: deterministic gating reason for a module run.
-// Priority order is the source of truth for `canRun` UX.
-export function getRunBlockReason(moduleId, state) {
-  const mod = MODULES.find(x => x.id === moduleId);
-  if (!mod) return { blocked: true, reason: 'Módulo desconhecido.' };
-  const m = state.modules[moduleId] || {};
-  const sessionOff = !state.session.active;
-  const needsRel = mod.deps.includes('relatorio');
-  const needsSqlite = mod.deps.includes('sqlite');
-  const sqliteReady = !needsSqlite || !!state.config.bd_distribuicao;
-  const relReady = !needsRel || !!m.relatorio;
-  const baseTr = moduleId === 'treinamentos' ? !!state.config.base_treinamentos : true;
-  const baseFe = moduleId === 'ferias'       ? !!state.config.base_cobranca    : true;
-  const meta = state.modulesMeta?.[moduleId];
-
-  if (sessionOff)            return { blocked: true, reason: 'Carregue a medição para liberar este módulo.' };
-  if (!relReady)             return { blocked: true, reason: 'Selecione o relatório do módulo.' };
-  if (!sqliteReady)          return { blocked: true, reason: 'Configure bd_distribuicao em Configurações.' };
-  if (!baseTr)               return { blocked: true, reason: 'Configure Base de Treinamentos em Configurações.' };
-  if (!baseFe)               return { blocked: true, reason: 'Configure Base de Férias em Configurações.' };
-  if (meta && !meta.enabled) return { blocked: true, reason: meta.reason || 'Indisponível.' };
-  return { blocked: false, reason: null };
-}
+// Re-export do helper canônico (single source of truth em modules/gating).
+export const getRunBlockReason = _gatingGetRunBlockReason;
 
 // ─────────────────────────────────────────────────────────────
 // APP SHELL
