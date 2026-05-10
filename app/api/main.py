@@ -18,7 +18,15 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from app.api.routes import atestado, config, distribuicao, ferias, initial_data, treinamentos
+from app.api.routes import (
+    atestado,
+    config,
+    distribuicao,
+    ferias,
+    initial_data,
+    registry,
+    treinamentos,
+)
 from app.infrastructure.data import (
     conectar,
     create_schema,
@@ -55,6 +63,7 @@ app = FastAPI(
 
 app.include_router(initial_data.router)
 app.include_router(config.router)
+app.include_router(registry.router)
 app.include_router(treinamentos.router)
 app.include_router(ferias.router)
 app.include_router(atestado.router)
