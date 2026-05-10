@@ -183,7 +183,7 @@ export const getRunBlockReason = _gatingGetRunBlockReason;
 // ─────────────────────────────────────────────────────────────
 export default function App() {
   const [state, dispatch] = useReducer(reducer, initialState);
-  const [view, setView] = useState('execucao');
+  const [view, setView] = useState('config');
   // C5: keep actual File blobs in refs (reducer holds only metadata).
   const medicaoFileRef = useRef(null);
   const relatorioFilesRef = useRef({});
