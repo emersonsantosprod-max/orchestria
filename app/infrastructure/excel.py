@@ -13,6 +13,7 @@ from xml.etree import ElementTree as ET
 
 import openpyxl
 
+from app.domain.column_aliases import COLUMN_ALIASES, OBRIGATORIAS
 from app.domain.core import (
     converter_desconto_para_minutos as _core_converter_desconto_para_minutos,
 )
@@ -124,21 +125,11 @@ def _match_coluna(header_norm: str, aliases: list, chave: str) -> bool:
     return False
 
 
-_OBRIGATORIAS = ('data', 'matricula', 'desconto', 'observacao')
+_OBRIGATORIAS = OBRIGATORIAS
 
 
 def mapear_colunas(sheet) -> dict:
-    alvos = {
-        'data':        ['data'],
-        'matricula':   ['re', 'matricula'],
-        'desconto':    ['descontos'],
-        'observacao':  ['observacao', 'observacoes'],
-        'situacao':     ['situacao'],
-        'md_cobranca':  ['md cobranca'],
-        'sg_funcao':    ['sg funcao'],
-        'tag':          ['tag'],
-        'pct_cobranca': ['% cobranca', 'pct cobranca'],
-    }
+    alvos = COLUMN_ALIASES
 
     for row_idx, row in enumerate(
         sheet.iter_rows(min_row=1, max_row=5, values_only=False), start=1
