@@ -7,7 +7,7 @@
 
 const MODULES_DEFS = {
   treinamentos: { needsRel: true,  needsSqlite: false, needsBaseFerias: false, needsBaseTreinamentos: true,  needsBaseTags: false },
-  ferias:       { needsRel: true,  needsSqlite: false, needsBaseFerias: true,  needsBaseTreinamentos: false, needsBaseTags: false },
+  ferias:       { needsRel: true,  needsSqlite: false, needsBaseFerias: true,  needsBaseTreinamentos: false, needsBaseTags: true  },
   atestados:    { needsRel: true,  needsSqlite: false, needsBaseFerias: false, needsBaseTreinamentos: false, needsBaseTags: false },
   'validar-hr': { needsRel: false, needsSqlite: false, needsBaseFerias: false, needsBaseTreinamentos: false, needsBaseTags: false },
   'validar-dist': { needsRel: false, needsSqlite: true,  needsBaseFerias: false, needsBaseTreinamentos: false, needsBaseTags: false },

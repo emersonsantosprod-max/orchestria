@@ -140,9 +140,10 @@ export const MODULES = [
 ];
 
 const CONFIG_KEYS = [
-  { key: 'base_treinamentos', label: 'Base de Treinamentos', hint: 'Catálogo de cursos e cargas horárias.',   accept: '.xlsx,.xls' },
-  { key: 'base_cobranca',     label: 'Base de Férias',       hint: 'Persistida. Usada por todos os módulos.', accept: '.xlsx,.xls' },
-  { key: 'bd_distribuicao',   label: 'BD Distribuição',      hint: 'SQLite. Requerido para Validar Dist.',     accept: '.sqlite,.db' },
+  { key: 'base_treinamentos', label: 'Base de Treinamentos', hint: 'Catálogo de cursos e cargas horárias.',          accept: '.xlsx,.xls' },
+  { key: 'base_cobranca',     label: 'Base de Férias',       hint: 'Persistida. Usada por todos os módulos.',         accept: '.xlsx,.xls' },
+  { key: 'base_tags',         label: 'Base de Tags',         hint: 'Mapa (Função, Unidade, MD, Situação) → TAG.',     accept: '.xlsx,.xls' },
+  { key: 'bd_distribuicao',   label: 'BD Distribuição',      hint: 'SQLite. Requerido para Validar Dist.',            accept: '.sqlite,.db' },
 ];
 
 // Re-export do helper canônico (single source of truth em modules/gating).
