@@ -1,24 +1,65 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { Card, Button, StatusOrb, FileChip } from './primitives.jsx';
 import { fmtRelative } from './format.js';
-import { API } from '../App.jsx';
+import { registrar, escolherArquivoNativo } from '../modules/registry/index.js';
+
+// Mapping cfg.key → tipo do registry endpoint.
+const TIPO_POR_KEY = {
+  base_treinamentos: 'treinamentos',
+  base_cobranca:     'cobranca',
+  base_tags:         'tags',
+  bd_distribuicao:   'distribuicao',
+};
 
 export default function ConfigCard({ cfg, value, dispatch, disabled, disabledReason }) {
-  const ref = useRef(null);
   const [saving, setSaving] = useState(false);
-  function pick() { if (!disabled) ref.current?.click(); }
-  function onFile(e) {
-    const f = e.target.files?.[0]; if (!f) return;
-    e.target.value = '';
+
+  async function selecionar() {
+    if (disabled) return;
+    const tipo = TIPO_POR_KEY[cfg.key];
+    if (!tipo) {
+      dispatch({
+        type: 'API_ERROR',
+        error: { code: 'CONFIG_KEY_DESCONHECIDA', message: `Sem tipo registry para ${cfg.key}` },
+      });
+      return;
+    }
+    const caminho = await escolherArquivoNativo(`Selecionar ${cfg.label}`);
+    if (!caminho) {
+      if (!window.pywebview?.api?.escolher_arquivo) {
+        dispatch({
+          type: 'API_ERROR',
+          error: {
+            code: 'NATIVE_DIALOG_UNAVAILABLE',
+            message: 'Dialog nativo disponível apenas no build empacotado (pywebview).',
+          },
+        });
+      }
+      return;
+    }
     setSaving(true);
-    API.saveConfig(cfg.key, f).then(() => {
-      dispatch({ type: 'CONFIG_SAVED', key: cfg.key, file: { name: f.name } });
-      dispatch({ type: 'LOG', entry: { ts: new Date().toISOString(), level: 'ok', source: `config/${cfg.key}`, msg: `Salvo: ${f.name}` } });
-    }).catch(err => {
-      dispatch({ type: 'API_ERROR', error: { code: err.code || 'CONFIG_FAILED', message: err.message || 'Falha ao salvar configuração' } });
-      dispatch({ type: 'LOG', entry: { ts: new Date().toISOString(), level: 'err', source: `config/${cfg.key}`, msg: err.message || 'Falha ao salvar configuração' } });
-    }).finally(() => setSaving(false));
+    try {
+      await registrar(tipo, caminho);
+      const nome = caminho.split(/[\\/]/).pop();
+      dispatch({ type: 'CONFIG_SAVED', key: cfg.key, file: { name: nome, caminho } });
+      dispatch({
+        type: 'LOG',
+        entry: { ts: new Date().toISOString(), level: 'ok', source: `config/${cfg.key}`, msg: `Registrado: ${nome}` },
+      });
+    } catch (err) {
+      dispatch({
+        type: 'API_ERROR',
+        error: { code: err.code || 'CONFIG_FAILED', message: err.message || 'Falha ao registrar arquivo' },
+      });
+      dispatch({
+        type: 'LOG',
+        entry: { ts: new Date().toISOString(), level: 'err', source: `config/${cfg.key}`, msg: err.message || 'Falha ao registrar arquivo' },
+      });
+    } finally {
+      setSaving(false);
+    }
   }
+
   return (
     <Card style={{ padding: 0 }}>
       <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: 16, alignItems: 'center', padding: '16px 20px' }}>
@@ -32,8 +73,8 @@ export default function ConfigCard({ cfg, value, dispatch, disabled, disabledRea
           <div style={{ fontSize: 15, fontWeight: 600 }}>{cfg.label}</div>
           <div style={{ fontSize: 13, color: 'var(--fg-muted)', marginTop: 3 }}>{cfg.hint}</div>
           {value
-            ? <div style={{ marginTop: 8 }}><FileChip name={value.name} /> <span style={{ fontSize: 11, color: 'var(--fg-muted)', marginLeft: 8 }}>salvo {fmtRelative(value.savedAt)}</span></div>
-            : <div style={{ fontSize: 12, color: 'var(--fg-subtle)', marginTop: 6, fontStyle: 'italic' }}>Nenhum arquivo carregado.</div>}
+            ? <div style={{ marginTop: 8 }}><FileChip name={value.name} /> <span style={{ fontSize: 11, color: 'var(--fg-muted)', marginLeft: 8 }}>registrado {fmtRelative(value.savedAt)}</span></div>
+            : <div style={{ fontSize: 12, color: 'var(--fg-subtle)', marginTop: 6, fontStyle: 'italic' }}>Nenhum arquivo registrado.</div>}
           {disabled && disabledReason && (
             <div style={{ fontSize: 12, color: 'var(--fg-subtle)', marginTop: 6, fontStyle: 'italic' }}>
               {disabledReason}
@@ -44,12 +85,11 @@ export default function ConfigCard({ cfg, value, dispatch, disabled, disabledRea
           kind={value ? 'secondary' : 'primary'}
           disabled={disabled}
           running={saving}
-          onClick={pick}
+          onClick={selecionar}
           title={disabled ? disabledReason : undefined}
         >
-          {value ? 'Substituir' : 'Enviar arquivo'}
+          {value ? 'Trocar arquivo' : 'Selecionar arquivo'}
         </Button>
-        <input ref={ref} type="file" accept={cfg.accept} hidden onChange={onFile} />
       </div>
     </Card>
   );

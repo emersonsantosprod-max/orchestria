@@ -3,7 +3,7 @@ import { ConfigRowSkeleton, SessionBlockSkeleton } from './skeletons.jsx';
 import SessionBlock from './SessionBlock.jsx';
 import ConfigCard from './ConfigCard.jsx';
 
-export default function ConfigView({ state, dispatch, blocked, fileRefs, configKeys }) {
+export default function ConfigView({ state, dispatch, blocked, configKeys }) {
   const boot = state.bootstrapping;
   const sessionActive = state.session.active;
   const disabledReason = sessionActive ? null : 'anexe a medição primeiro';
@@ -18,7 +18,7 @@ export default function ConfigView({ state, dispatch, blocked, fileRefs, configK
       )}
       {boot
         ? <SessionBlockSkeleton step={state.bootstrapStep} />
-        : <SessionBlock state={state} dispatch={dispatch} blocked={blocked} fileRefs={fileRefs} />}
+        : <SessionBlock state={state} dispatch={dispatch} blocked={blocked} />}
       <div style={{ display: 'grid', gap: 10 }}>
         {boot
           ? configKeys.map((c, i) => <ConfigRowSkeleton key={c.key} index={i} step={state.bootstrapStep} />)

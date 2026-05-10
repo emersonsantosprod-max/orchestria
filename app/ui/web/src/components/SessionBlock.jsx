@@ -1,34 +1,53 @@
-import { useRef } from 'react';
 import { Card, Button, StatusOrb, Chip, FileChip } from './primitives.jsx';
 import { fmtMes, fmtRelative } from './format.js';
-import { API } from '../App.jsx';
+import { registrar, escolherArquivoNativo } from '../modules/registry/index.js';
 
-export default function SessionBlock({ state, dispatch, blocked, fileRefs }) {
-  const fileRef = useRef(null);
+export default function SessionBlock({ state, dispatch, blocked }) {
   const { session, run } = state;
   const isLoadingSession = run.action === 'session/medicao';
 
-  function pick() { if (!blocked) fileRef.current?.click(); }
-  function onPick(e) {
-    const f = e.target.files?.[0]; if (!f) return;
-    e.target.value = '';
+  async function selecionar() {
+    if (blocked) return;
+    const caminho = await escolherArquivoNativo('Selecionar medição');
+    if (!caminho) {
+      if (!window.pywebview?.api?.escolher_arquivo) {
+        dispatch({
+          type: 'API_ERROR',
+          error: {
+            code: 'NATIVE_DIALOG_UNAVAILABLE',
+            message: 'Dialog nativo disponível apenas no build empacotado (pywebview).',
+          },
+        });
+      }
+      return;
+    }
     dispatch({ type: 'RUN_START', action: 'session/medicao' });
-    fileRefs.medicao.current = f;  // C5: hold the actual File for run-time multipart
-    API.loadMedicao(f).then(res => {
-      dispatch({ type: 'SESSION_LOADED', mes: res.mes_referencia, medicao: res.medicao });
+    try {
+      const res = await registrar('medicao', caminho);
+      dispatch({
+        type: 'SESSION_LOADED',
+        mes: res.mes_referencia,
+        medicao: { name: caminho.split(/[\\/]/).pop(), caminho, size: 0 },
+      });
       dispatch({ type: 'RUN_END_OK', summary: 'Sessão ativada' });
-    }).catch(err => {
-      fileRefs.medicao.current = null;
-      dispatch({ type: 'RUN_END_ERR', error: { code: err.code || 'SESSION_NOT_INITIALIZED', message: err.message || 'Falha ao ler medição' } });
-    });
+    } catch (err) {
+      dispatch({
+        type: 'RUN_END_ERR',
+        error: {
+          code: err.code || 'SESSION_NOT_INITIALIZED',
+          message: err.message || 'Falha ao registrar medição',
+        },
+      });
+    }
   }
 
   function clear() {
     if (blocked) return;
-    fileRefs.medicao.current = null;
-    fileRefs.relatorios.current = {};
     dispatch({ type: 'SESSION_CLEARED' });
-    dispatch({ type: 'LOG', entry: { ts: new Date().toISOString(), level: 'info', source: 'session', msg: 'Sessão encerrada' } });
+    dispatch({
+      type: 'LOG',
+      entry: { ts: new Date().toISOString(), level: 'info', source: 'session', msg: 'Sessão encerrada' },
+    });
   }
 
   return (
@@ -47,7 +66,7 @@ export default function SessionBlock({ state, dispatch, blocked, fileRefs }) {
           </div>
           <div style={{ fontSize: 13, color: 'var(--fg-muted)', marginTop: 4 }}>
             {session.active
-              ? <>Arquivo carregado: <FileChip name={session.medicao.name} size={session.medicao.size} /> · ativada {fmtRelative(session.loadedAt)}.</>
+              ? <>Arquivo registrado: <FileChip name={session.medicao?.name || 'medição registrada'} /> · ativada {fmtRelative(session.loadedAt)}.</>
               : 'Selecione a planilha de medição para extrair mes_referencia e ativar a sessão.'}
           </div>
         </div>
@@ -59,11 +78,10 @@ export default function SessionBlock({ state, dispatch, blocked, fileRefs }) {
             kind={session.active ? 'secondary' : 'primary'}
             disabled={blocked}
             running={isLoadingSession}
-            onClick={pick}
+            onClick={selecionar}
           >
-            {session.active ? 'Trocar medição' : 'Carregar medição'}
+            {session.active ? 'Trocar medição' : 'Selecionar medição'}
           </Button>
-          <input ref={fileRef} type="file" accept=".xlsx,.xls" hidden onChange={onPick} />
         </div>
       </div>
     </Card>
