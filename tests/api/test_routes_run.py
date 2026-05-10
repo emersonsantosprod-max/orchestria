@@ -101,14 +101,21 @@ def _medicao_para_ferias_bytes() -> bytes:
     return buf.getvalue()
 
 
-def test_run_atestado_processa_relatorio(client):
+def _registrar_medicao(tc, isolated_paths, content_bytes=None):
+    """Helper: persiste bytes da medição em tmp_path e registra via /api/registry/medicao."""
+    p = isolated_paths / "medicao_runtime.xlsx"
+    p.write_bytes(content_bytes if content_bytes is not None else MEDICAO_MOCK.read_bytes())
+    r = tc.post("/api/registry/medicao", json={"caminho": str(p)})
+    assert r.status_code == 200, r.text
+    return p
+
+
+def test_run_atestado_processa_relatorio(client, isolated_paths):
     tc, _ = client
+    _registrar_medicao(tc, isolated_paths)
     res = tc.post(
         "/api/run/atestado",
-        files={
-            "medicao": ("medicao.xlsx", MEDICAO_MOCK.read_bytes()),
-            "relatorio": ("atestado.xlsx", _atestado_xlsx_bytes()),
-        },
+        files={"relatorio": ("atestado.xlsx", _atestado_xlsx_bytes())},
     )
     assert res.status_code == 200, res.text
     body = res.json()
@@ -117,28 +124,34 @@ def test_run_atestado_processa_relatorio(client):
     assert body["arquivo_saida"] == "medicao_atestado_processada.xlsx"
 
 
-def test_run_ferias_sem_cobranca_retorna_422(client):
+def test_run_atestado_sem_medicao_registrada_retorna_409(client):
     tc, _ = client
     res = tc.post(
+        "/api/run/atestado",
+        files={"relatorio": ("atestado.xlsx", _atestado_xlsx_bytes())},
+    )
+    assert res.status_code == 409
+    assert "MEDICAO_NAO_REGISTRADA" in res.json()["detail"]
+
+
+def test_run_ferias_sem_cobranca_retorna_422(client, isolated_paths):
+    tc, _ = client
+    _registrar_medicao(tc, isolated_paths)
+    res = tc.post(
         "/api/run/ferias",
-        files={
-            "medicao": ("medicao.xlsx", MEDICAO_MOCK.read_bytes()),
-            "relatorio": ("ferias.xlsx", _ferias_xlsx_bytes()),
-        },
+        files={"relatorio": ("ferias.xlsx", _ferias_xlsx_bytes())},
     )
     assert res.status_code == 422
     assert "bd_cobranca" in res.json()["detail"]
 
 
-def test_run_ferias_com_cobranca_executa_pipeline(client):
+def test_run_ferias_com_cobranca_executa_pipeline(client, isolated_paths):
     tc, db = client
     _seed_cobranca(db)
+    _registrar_medicao(tc, isolated_paths, _medicao_para_ferias_bytes())
     res = tc.post(
         "/api/run/ferias",
-        files={
-            "medicao": ("medicao.xlsx", _medicao_para_ferias_bytes()),
-            "relatorio": ("ferias.xlsx", _ferias_xlsx_bytes()),
-        },
+        files={"relatorio": ("ferias.xlsx", _ferias_xlsx_bytes())},
     )
     assert res.status_code == 200, res.text
     body = res.json()
@@ -146,23 +159,19 @@ def test_run_ferias_com_cobranca_executa_pipeline(client):
     assert isinstance(body["inconsistencias"], list)
 
 
-def test_run_distribuicao_sem_bd_retorna_422(client):
+def test_run_distribuicao_sem_bd_retorna_422(client, isolated_paths):
     tc, _ = client
-    res = tc.post(
-        "/api/run/distribuicao",
-        files={"medicao": ("medicao.xlsx", MEDICAO_MOCK.read_bytes())},
-    )
+    _registrar_medicao(tc, isolated_paths)
+    res = tc.post("/api/run/distribuicao")
     assert res.status_code == 422
     assert "bd_distribuicao" in res.json()["detail"]
 
 
-def test_run_distribuicao_com_bd_executa_validacao(client):
+def test_run_distribuicao_com_bd_executa_validacao(client, isolated_paths):
     tc, db = client
     _seed_distribuicao(db)
-    res = tc.post(
-        "/api/run/distribuicao",
-        files={"medicao": ("medicao.xlsx", MEDICAO_MOCK.read_bytes())},
-    )
+    _registrar_medicao(tc, isolated_paths)
+    res = tc.post("/api/run/distribuicao")
     assert res.status_code == 200, res.text
     body = res.json()
     assert body["processados"] == 0

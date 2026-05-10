@@ -1,28 +1,48 @@
 """POST /api/run/distribuicao
 
-Validação de aderência da medição contra bd_distribuicao. Sem geração de updates.
+Validação de aderência da medição (lida do registry) contra bd_distribuicao.
+Sem geração de updates.
 Guard: bd_distribuicao precisa estar populada (bootstrap em api.main.lifespan).
 """
 
 from __future__ import annotations
 
 import logging
-import os
 import sqlite3
-import tempfile
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.api.dependencies import get_conn
 from app.api.schemas.execution import ExecutionResult, InconsistenciaOut
 from app.application.pipeline import executar_pipeline
 from app.domain.errors import AutomacaoError
-from app.infrastructure.data import DistribuicaoRepository
-from app.infrastructure.paths import processed_output_path
+from app.infrastructure.data import DistribuicaoRepository, obter_medicao_atual
+from app.infrastructure.paths import processed_output_path, validar_arquivo_referenciado
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+
+def _resolver_medicao_path(conn: sqlite3.Connection) -> str:
+    rec = obter_medicao_atual(conn)
+    if rec is None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="MEDICAO_NAO_REGISTRADA: registre a medição em Configurações.",
+        )
+    try:
+        return str(validar_arquivo_referenciado(rec["caminho"], exts=(".xlsx", ".xls")))
+    except FileNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"ARQUIVO_NAO_ENCONTRADO: {exc}",
+        ) from exc
+    except (ValueError, PermissionError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
 
 
 @router.post(
@@ -31,7 +51,6 @@ router = APIRouter()
     status_code=status.HTTP_200_OK,
 )
 async def run_distribuicao(
-    medicao: UploadFile,
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> ExecutionResult:
     if DistribuicaoRepository(conn).count() == 0:
@@ -40,19 +59,14 @@ async def run_distribuicao(
             detail="bd_distribuicao não populada. Verifique o bootstrap da aplicação.",
         )
 
-    medicao_bytes = await medicao.read()
+    medicao_path = _resolver_medicao_path(conn)
 
-    tmp_medicao: str | None = None
     try:
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx") as tmp:
-            tmp.write(medicao_bytes)
-            tmp_medicao = tmp.name
-
         caminho_saida = str(processed_output_path("distribuicao"))
 
         logger.info("run_distribuicao: executando pipeline (validação)")
         resultado = executar_pipeline(
-            caminho_medicao=tmp_medicao,
+            caminho_medicao=medicao_path,
             caminho_saida=caminho_saida,
             conn=conn,
             validar_distribuicao=True,
@@ -72,9 +86,6 @@ async def run_distribuicao(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Erro interno inesperado",
         ) from None
-    finally:
-        if tmp_medicao and os.path.exists(tmp_medicao):
-            os.remove(tmp_medicao)
 
     return ExecutionResult(
         processados=0,
