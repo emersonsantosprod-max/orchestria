@@ -22,9 +22,11 @@ from pydantic import BaseModel, Field
 from app.api.dependencies import get_conn
 from app.domain.errors import AutomacaoError
 from app.infrastructure.data import (
+    BaseTagsRepository,
     DistribuicaoRepository,
     FeriasRepository,
     TreinamentosRepository,
+    registrar_base_tags,
     registrar_base_treinamentos,
     registrar_bd,
     registrar_cobranca,
@@ -155,7 +157,25 @@ def registrar_distribuicao(
     return RegistryBaseResponse(caminho=path, qtd=qtd)
 
 
-# /api/registry/tags é adicionado em 4b (depois de implementar registrar_base_tags).
+@router.post(
+    "/api/registry/tags",
+    response_model=RegistryBaseResponse,
+    status_code=status.HTTP_200_OK,
+)
+def registrar_tags_route(
+    payload: RegistryRequest,
+    conn: sqlite3.Connection = Depends(get_conn),
+) -> RegistryBaseResponse:
+    path = _validar_path(payload.caminho, exts=('.xlsx', '.xls'))
+    try:
+        registrar_base_tags(path, conn)
+        qtd = BaseTagsRepository(conn).count()
+    except (ValueError, AutomacaoError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+    return RegistryBaseResponse(caminho=path, qtd=qtd)
 
 
 @router.get(

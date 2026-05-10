@@ -110,6 +110,43 @@ def test_registry_cobranca_arquivo_vazio_422(client):
     assert r.status_code == 422
 
 
+def _xlsx_tags(tmp: Path) -> Path:
+    p = tmp / "tags.xlsx"
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.append(["SG Função", "Unidade", "MD Cobrança", "Situação", "Tag"])
+    ws.append(["Mecânico", "UN-A", "PACOTE", "FÉRIAS", "M-A-PA-FE"])
+    wb.save(p)
+    return p
+
+
+def test_registry_tags_happy(client):
+    c, tmp = client
+    p = _xlsx_tags(tmp)
+    r = c.post("/api/registry/tags", json={"caminho": str(p)})
+    assert r.status_code == 200, r.text
+    assert r.json()["qtd"] >= 1
+
+
+def test_registry_tags_arquivo_vazio_422(client):
+    c, tmp = client
+    p = tmp / "vazio.xlsx"
+    wb = openpyxl.Workbook()
+    wb.save(p)
+    r = c.post("/api/registry/tags", json={"caminho": str(p)})
+    assert r.status_code == 422
+
+
+def test_registry_tags_get_consulta(client):
+    c, tmp = client
+    r = c.get("/api/registry/tags")
+    assert r.json()["registrado"] is False
+    p = _xlsx_tags(tmp)
+    c.post("/api/registry/tags", json={"caminho": str(p)})
+    r = c.get("/api/registry/tags")
+    assert r.json()["registrado"] is True
+
+
 def test_registry_get_consulta(client):
     c, tmp = client
     # Sem nada registrado

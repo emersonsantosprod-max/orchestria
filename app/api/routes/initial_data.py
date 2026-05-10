@@ -46,6 +46,7 @@ from app.api.schemas.initial_data import (
     ReportStatus,
 )
 from app.infrastructure.data import (
+    BaseTagsRepository,
     DistribuicaoRepository,
     RegistryRepository,
     TreinamentosRepository,
@@ -132,13 +133,25 @@ def get_initial_data(conn: sqlite3.Connection = Depends(get_conn)) -> InitialDat
 
     bd_reg = registry.get("bd")
     base_tre_reg = registry.get("treinamentos")
+    base_cob_reg = registry.get("cobranca")
+    tags_reg = registry.get("tags")
+    tags_ready = BaseTagsRepository(conn).count() > 0
 
     config = {
-        "base_cobranca": ConfigStatus(ready=False, name=None, saved_at=None),
+        "base_cobranca": ConfigStatus(
+            ready=base_cob_reg is not None,
+            name=base_cob_reg["caminho"] if base_cob_reg else None,
+            saved_at=base_cob_reg["importado_em"] if base_cob_reg else None,
+        ),
         "base_treinamentos": ConfigStatus(
             ready=catalog_ready,
             name=base_tre_reg["caminho"] if base_tre_reg else None,
             saved_at=base_tre_reg["importado_em"] if base_tre_reg else None,
+        ),
+        "base_tags": ConfigStatus(
+            ready=tags_ready,
+            name=tags_reg["caminho"] if tags_reg else None,
+            saved_at=tags_reg["importado_em"] if tags_reg else None,
         ),
         "bd_distribuicao": ConfigStatus(
             ready=distribuicao_ready,
