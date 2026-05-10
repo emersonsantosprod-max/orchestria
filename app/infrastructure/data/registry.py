@@ -10,6 +10,7 @@ from __future__ import annotations
 import sqlite3
 from datetime import datetime
 
+
 class RegistryRepository:
     def __init__(self, conn: sqlite3.Connection) -> None:
         self._conn = conn

@@ -12,7 +12,6 @@ transação e faz commit. Os Repositories permanecem livres de commit.
 from __future__ import annotations
 
 import logging
-import os
 import sqlite3
 from collections.abc import Iterator
 from contextlib import closing, contextmanager
@@ -27,7 +26,6 @@ from app.infrastructure.data.registry import RegistryRepository
 from app.infrastructure.data.repositories.distribuicao import DistribuicaoRepository
 from app.infrastructure.data.repositories.ferias import FeriasRepository
 from app.infrastructure.data.repositories.treinamentos import TreinamentosRepository
-from app.infrastructure.paths import uploads_dir
 
 logger = logging.getLogger(__name__)
 
@@ -46,18 +44,6 @@ def _normalizar_pct(value) -> float:
         return 0.0
     v = float(value)
     return v / 100 if v > 1.0 else v
-
-
-def _persistir_upload_permanente(origem_tmp: str | Path, tipo: str) -> Path:
-    """Promove um arquivo temporário a storage durável (data/uploads/<tipo>.xlsx).
-
-    Usa os.replace para overwrite atômico no mesmo filesystem. O caller é
-    responsável por garantir que `origem_tmp` esteja no mesmo filesystem
-    do destino (i.e. criar tmp em uploads_dir()).
-    """
-    destino = uploads_dir() / f'{tipo}.xlsx'
-    os.replace(str(origem_tmp), str(destino))
-    return destino
 
 
 @contextmanager
@@ -291,8 +277,9 @@ def registrar_medicao_arquivo(
     Não persiste o conteúdo em SQLite — leitura runtime via `obter_medicao(conn)`
     re-lê o Excel apontado por `registro_arquivos['medicao']`.
 
-    Retorna `(avisos, total_registros)`. `path` deve ser durável; o caller
-    (config.py) garante via `_persistir_upload_permanente`.
+    Retorna `(avisos, total_registros)`. `path` deve apontar para arquivo
+    durável e legível; rotas de registro validam via
+    `validar_arquivo_referenciado` antes de chamar.
     """
     registros, avisos = ler_medicao_do_excel(path)
     RegistryRepository(conn).upsert('medicao', str(path))

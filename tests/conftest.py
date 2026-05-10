@@ -8,18 +8,10 @@ Parallel-safe rules:
 - compatible with pytest-xdist
 
 WARNING — local-binding caveat:
-Patching app.infrastructure.paths only affects dynamic lookups.
-Modules importing symbols via:
-
-    from app.infrastructure.paths import uploads_dir
-
-create local bindings. Tests exercising those modules MUST additionally
-patch the consumer-module symbol directly:
-
-    monkeypatch.setattr(
-        "app.api.routes.config.uploads_dir",
-        lambda: uploads,
-    )
+Patching `app.infrastructure.paths` afeta apenas lookups dinâmicos.
+Módulos que importam símbolos via `from app.infrastructure.paths import X`
+criam binding local — testes precisam patchear o símbolo do consumer
+explicitamente quando relevante.
 """
 
 from __future__ import annotations
@@ -33,18 +25,14 @@ from app.infrastructure import paths
 def isolated_paths(monkeypatch, tmp_path):
     """Explicit filesystem isolation fixture.
 
-    Only tests that touch filesystem should request this fixture.
-
-    Patches only source-module symbols. Consumer-module local bindings
-    still require explicit patching per test.
+    Patches só symbols source-module. Consumer-module local bindings
+    ainda precisam patch per-test.
     """
-    uploads = tmp_path / "uploads"
     exports = tmp_path / "exports"
     logs = tmp_path / "logs"
-    for directory in (uploads, exports, logs):
+    for directory in (exports, logs):
         directory.mkdir(exist_ok=True)
     monkeypatch.setattr(paths, "db_path", lambda: tmp_path / "automacao.db")
-    monkeypatch.setattr(paths, "uploads_dir", lambda: uploads)
     monkeypatch.setattr(paths, "exports_dir", lambda: exports)
     monkeypatch.setattr(paths, "logs_dir", lambda: logs)
     return tmp_path
