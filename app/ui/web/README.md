@@ -10,11 +10,11 @@ wired by the UI:
 
 | UI surface                 | Endpoint                       | Status                      |
 |----------------------------|--------------------------------|-----------------------------|
-| Carregar medição           | client-side only (File held in `useRef`) | mes_referencia stays null until a backend route exposes it |
-| Executar Treinamentos      | `POST /api/run/treinamentos` (multipart: `medicao`, `catalogo`) | wired |
-| Executar Férias / Atestados / Validar HR / Validar Dist. | `POST /api/run/<id>` | UI surfaces `RUN_NOT_IMPLEMENTED` until the route exists |
-| Configuração (base_*, bd_*) | `POST /api/config/<key>` | UI surfaces `CONFIG_NOT_IMPLEMENTED` until the route exists |
-| Status inicial             | `GET /api/initial-data`        | available via `API.initialData()` (not yet rendered) |
+| Registrar medição          | `POST /api/registry/medicao` (JSON `{caminho}`) | wired (path-based via pywebview dialog) |
+| Executar Treinamentos      | `POST /api/run/treinamentos` (multipart: `catalogo`) | wired |
+| Executar Férias / Atestados / Validar HR / Validar Dist. | `POST /api/run/<id>` | wired (medição lida do registry) |
+| Registrar bases (treinamentos, cobrança, tags, distribuição) | `POST /api/registry/<tipo>` (JSON `{caminho}`) | wired |
+| Status inicial             | `GET /api/initial-data`        | wired |
 
 The list of endpoints actually called per module lives in `ENDPOINTS`
 inside [src/App.jsx](src/App.jsx). Add a new entry there as each FastAPI
