@@ -10,8 +10,16 @@ Structure: `.claude/PROJECT_STRUCTURE.md`.
 - Inconsistência: registro válido extraído que não pôde ser aplicado na planilha.
 - Não são inconsistências: férias sem aprovação; dados fora do critério de aplicação.
 - Férias com período fora do mês de referência são ignoradas silenciosamente.
-- Medição cobre único mês; `pipeline._mes_referencia` levanta `PlanilhaInvalidaError` em multi-mês.
-- PyInstaller spec: `AutomacaoMedicao.spec`.
+- Medição cobre único mês — premissa do domínio. Register-time extrai
+  `(year, month)` da primeira data via `obter_mes_referencia_medicao_lite`;
+  `pipeline._mes_referencia` mantém validação estrita (`mes_referencia_unico`)
+  no Execute como defesa em profundidade.
+- `registro_arquivos` guarda **caminho original** do arquivo no host — fonte
+  de verdade de ownership. SQLite (catalogo, cobranca, distribuicao, tags)
+  é materialização eager para lookup; re-import é explícito (re-registrar
+  via UI). Sem `data/uploads/` (descontinuado em Entrega 4a).
+- PyInstaller spec: `AutomacaoMedicao.spec`. Desktop wrapper via pywebview;
+  build empacotado **exige** webview do SO (sem fallback silencioso).
 
 ## CONTRACTS
 
@@ -23,6 +31,15 @@ Structure: `.claude/PROJECT_STRUCTURE.md`.
 - `gerar_updates_atestado(dados)` → `(list[Update], list[Inconsistencia])`.
 - `pipeline.executar_pipeline(..., conn=None, validar_distribuicao=False)`: `validar_distribuicao=True` exige `conn`.
 - `app.paths.db_path()` resolve o caminho do SQLite — nunca `Path('data/automacao.db')`.
+- `validar_arquivo_referenciado(path, exts)` em `app.infrastructure.paths` é
+  a fonte canônica de validação de path (existência, extensão, leitura).
+  Usar em register-time E Execute-time.
+- Rotas `POST /api/registry/<tipo>` recebem JSON `{"caminho": str}` com path
+  absoluto do arquivo no host. `<tipo>` ∈ {medicao, treinamentos, cobranca,
+  distribuicao, tags}. Substituem as antigas `POST /api/config/<tipo>` (UploadFile).
+- Rotas `POST /api/run/<modulo>` leem o filepath da medição via
+  `obter_medicao_atual(conn).caminho` (registro_arquivos). Apenas o
+  relatório do módulo vem por multipart (`relatorio` ou `catalogo`).
 
 ## CRITICAL
 
