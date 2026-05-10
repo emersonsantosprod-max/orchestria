@@ -48,6 +48,7 @@ else:
 _uvicorn_hidden  = collect_submodules('uvicorn')
 _openpyxl_hidden = collect_submodules('openpyxl')
 _fastapi_hidden  = collect_submodules('fastapi')
+_webview_hidden  = collect_submodules('webview')
 
 a = Analysis(
     ['app/desktop_entry.py'],
@@ -63,6 +64,7 @@ a = Analysis(
         *_uvicorn_hidden,
         *_openpyxl_hidden,
         *_fastapi_hidden,
+        *_webview_hidden,
     ],
     hookspath=[],
     hooksconfig={},
