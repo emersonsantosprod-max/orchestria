@@ -44,6 +44,7 @@ def gerar_updates_atestado(dados: list) -> tuple[list[Update], list[Inconsistenc
                 observacao='ATESTADO MÉDICO',
                 situacao='AUSENTE',
                 sobrescrever_obs=True,
+                tag='ATESTADO',
                 row=None,
             ))
             current += timedelta(days=1)

@@ -395,8 +395,8 @@ def aplicar_updates(
                 patches[(row_idx, col_desc_1)] = desconto_str
             if sit and col_sit_1 is not None:
                 patches[(row_idx, col_sit_1)] = sit
-            if upd.tipo == 'atestado' and col_tag_1 is not None:
-                patches[(row_idx, col_tag_1)] = 'ATESTADO'
+            if upd.tag is not None and col_tag_1 is not None:
+                patches[(row_idx, col_tag_1)] = upd.tag
 
     return patches, inconsistencias
 

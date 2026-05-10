@@ -130,6 +130,8 @@ class Update:
       - row preenchido ⇒ writer aplica diretamente, sem consultar índice
       - sobrescrever_obs=False ⇒ append com deduplicação (pela observação existente)
       - sobrescrever_obs=True  ⇒ replace da célula
+      - tag=None ⇒ writer não toca a coluna TAG; tag='X' ⇒ escreve X na coluna TAG
+        (writer genérico — sem branching por tipo).
     """
     tipo: Tipo
     matricula: str
@@ -138,6 +140,7 @@ class Update:
     desconto_min: int | None = None
     situacao: str | None = None
     sobrescrever_obs: bool = False
+    tag: str | None = None
     row: int | None = None
 
     def __post_init__(self):
