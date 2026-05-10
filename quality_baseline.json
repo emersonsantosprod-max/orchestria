@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-05-08T20:17:40",
+  "generated_at": "2026-05-09T22:58:55",
   "metrics": {
-    "lines": 7227,
-    "functions": 450,
-    "statements": 4677,
-    "branches": 733,
+    "lines": 8335,
+    "functions": 533,
+    "statements": 5299,
+    "branches": 808,
     "oversized_files": 1,
-    "violations": 2,
-    "duplication": 712
+    "violations": 1,
+    "duplication": 906
   }
 }
