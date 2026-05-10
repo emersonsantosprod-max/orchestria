@@ -60,8 +60,8 @@ Se o `.exe` levantar `No module named 'webview'`:
 - Causa raiz: pywebview ausente do venv usado para build. **Não** é
   problema de hiddenimports — `collect_submodules` retorna lista vazia
   silenciosamente quando o pacote não está instalado.
-- Fix: `pip install -e .` no venv de build e rebuild. O `.spec` agora
-  falha antes da Analysis com mensagem clara nesse caso.
+- Fix: `pip install -e .` no venv de build e rebuild. O `.spec` aborta
+  antes da Analysis com mensagem clara nesse caso.
 
 Se o `.exe` levantar `No module named 'webview.platforms.X'`:
 - Causa: backend específico (X = winforms, qt, cef) ativado em runtime

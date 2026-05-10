@@ -5,38 +5,17 @@ Entrypoint: `app/desktop_entry.py` — sobe uvicorn em 127.0.0.1:8000 e abre
 o navegador padrão na SPA servida via StaticFiles por `app/api/main.py`.
 
 Bundled assets:
-  - `assets/distribuicao_contratual_normalizada.xlsx` — SSOT versionado
-    para bootstrap idempotente da distribuição contratual.
-  - `assets/base_treinamentos.xlsx` — SSOT da base de tipos de treinamento.
-  - `ui/web/dist/` — build do frontend Vite servido como StaticFiles.
-  - Se qualquer um estiver ausente, o build prossegue e o respectivo
-    bootstrap detecta a ausência em runtime.
+  - `app/ui/web/dist/` — build do frontend Vite servido como StaticFiles.
+  - Bases de dados (treinamentos, cobrança, distribuição, tags) são
+    registradas em runtime via UI — não há bootstrap por arquivo bundled.
 """
 
 import os
 from PyInstaller.utils.hooks import collect_submodules
 
-_DIST_XLSX  = 'assets/distribuicao_contratual_normalizada.xlsx'
-_TRAIN_XLSX = 'assets/base_treinamentos.xlsx'
-_WEB_DIST   = 'app/ui/web/dist'
+_WEB_DIST = 'app/ui/web/dist'
 
 _datas = []
-if os.path.exists(_DIST_XLSX):
-    _datas.append((_DIST_XLSX, 'assets'))
-else:
-    print(
-        f"[spec] AVISO: '{_DIST_XLSX}' ausente — build prosseguirá sem "
-        "o xlsx de bootstrap. Distribuição contratual deverá ser "
-        "registrada em runtime."
-    )
-if os.path.exists(_TRAIN_XLSX):
-    _datas.append((_TRAIN_XLSX, 'assets'))
-else:
-    print(
-        f"[spec] AVISO: '{_TRAIN_XLSX}' ausente — build prosseguirá sem "
-        "o xlsx de bootstrap. Base de treinamentos deverá ser "
-        "importada manualmente em runtime."
-    )
 if os.path.isdir(_WEB_DIST):
     _datas.append((_WEB_DIST, 'app/ui/web/dist'))
 else:
