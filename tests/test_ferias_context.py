@@ -1,5 +1,7 @@
 """FeriasContext: dataclass frozen com defaults sensatos."""
 
+from dataclasses import FrozenInstanceError
+
 import pytest
 
 from app.domain.ferias import FeriasContext
@@ -23,5 +25,5 @@ def test_frozen():
         base_cobranca={}, medicao_por_matricula={},
         md_cobranca_por_chave={}, sg_funcao_por_chave={},
     )
-    with pytest.raises(Exception):
+    with pytest.raises(FrozenInstanceError):
         ctx.base_cobranca = {'mut': 1}  # type: ignore

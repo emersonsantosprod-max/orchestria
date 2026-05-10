@@ -20,8 +20,9 @@ def test_aliases_lowercase():
 
 def test_excel_mapear_colunas_consome_aliases():
     """mapear_colunas usa COLUMN_ALIASES como fonte única."""
-    from app.infrastructure import excel as writer
     from openpyxl import Workbook
+
+    from app.infrastructure import excel as writer
 
     wb = Workbook()
     ws = wb.active

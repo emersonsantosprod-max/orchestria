@@ -33,10 +33,11 @@ from app.domain.errors import (
     ArquivoNaoEncontradoError,
     AutomacaoError,
 )
+from app.domain.ferias import FeriasContext
 from app.domain.reference_month import mes_referencia_unico
 from app.infrastructure import data, loaders
 from app.infrastructure import excel as writer
-from app.infrastructure.data import TreinamentosRepository
+from app.infrastructure.data import BaseTagsRepository, TreinamentosRepository
 
 logger = logging.getLogger(__name__)
 
@@ -87,7 +88,7 @@ def derivar_mes_referencia_da_medicao(caminho_medicao: str):
         )
         try:
             col_map = writer.mapear_colunas(sheet_ro)
-            (_index, _obs, _desc, _md, _sg,
+            (_index, _obs, _desc, _md, _sg, _und,
              medicao_por_matricula, _records,
              _obs_div, _desc_div) = writer.indexar_e_ler_dados(sheet_ro, col_map)
         finally:
@@ -180,6 +181,7 @@ def executar_pipeline(
         ]
         (index, obs_existentes, descontos_existentes,
          md_cobranca_por_chave, sg_funcao_por_chave,
+         unidade_por_chave,
          medicao_por_matricula, medicao_records,
          obs_divergentes, desc_divergentes) = writer.indexar_e_ler_dados(sheet_ro, col_map)
         wb_ro.close()
@@ -209,14 +211,21 @@ def executar_pipeline(
     if ferias_ativo:
         logger.info('executar_pipeline: domínio férias')
         mes_ref = _mes_referencia(medicao_por_matricula)
+        base_tags_por_chave = (
+            BaseTagsRepository(conn).todos() if conn is not None else {}
+        )
+        ctx_ferias = FeriasContext(
+            base_cobranca=base_cobranca,
+            medicao_por_matricula=medicao_por_matricula,
+            md_cobranca_por_chave=md_cobranca_por_chave,
+            sg_funcao_por_chave=sg_funcao_por_chave,
+            unidade_por_chave=unidade_por_chave,
+            base_tags_por_chave=base_tags_por_chave,
+            mes_referencia=mes_ref,
+            col_map=col_map,
+        )
         updates_ferias, inconst_ferias = ferias.gerar_updates_ferias(
-            dados_ferias,
-            base_cobranca,
-            medicao_por_matricula,
-            md_cobranca_por_chave,
-            sg_funcao_por_chave,
-            mes_ref,
-            col_map,
+            dados_ferias, ctx_ferias,
         )
 
     updates_atestado = []

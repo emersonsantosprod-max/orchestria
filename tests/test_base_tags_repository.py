@@ -38,8 +38,9 @@ def test_salvar_substitui_atomicamente(conn):
 
 
 def test_chave_composta_pk(conn):
+    import sqlite3
     repo = BaseTagsRepository(conn)
-    with pytest.raises(Exception):
+    with pytest.raises(sqlite3.IntegrityError):
         repo.salvar([
             ('A', 'B', 'C', 'D', 'T1'),
             ('A', 'B', 'C', 'D', 'T2'),  # PK duplicada

@@ -173,6 +173,7 @@ def indexar_e_ler_dados(sheet, col_map: dict) -> tuple:
       descontos_existentes : {(matricula, data_str): int_min} — last-write-wins
       md_cobranca_por_chave: {(matricula, data_str): str_UPPER}
       sg_funcao_por_chave  : {(matricula, data_str): str_UPPER}
+      unidade_por_chave    : {(matricula, data_str): str_UPPER}  (vazio se col ausente)
       medicao_por_matricula: {matricula: [(date_obj, data_str, [rows]), ...]}
       medicao_records      : list[dict] com (data, sg_funcao, md_cobranca,
                              pct_cobranca) por linha — usado por
@@ -188,6 +189,7 @@ def indexar_e_ler_dados(sheet, col_map: dict) -> tuple:
     descontos_existentes = {}
     md_cobranca_por_chave = {}
     sg_funcao_por_chave = {}
+    unidade_por_chave = {}
     medicao_records: list[dict] = []
     obs_divergentes: set = set()
     desc_divergentes: set = set()
@@ -198,6 +200,7 @@ def indexar_e_ler_dados(sheet, col_map: dict) -> tuple:
     col_desc = col_map['desconto']
     col_mdc  = col_map.get('md_cobranca')
     col_sgf  = col_map.get('sg_funcao')
+    col_und  = col_map.get('unidade')
     col_pct  = col_map.get('pct_cobranca')
     hrow     = col_map['_header_row']
 
@@ -230,6 +233,8 @@ def indexar_e_ler_dados(sheet, col_map: dict) -> tuple:
             md_cobranca_por_chave[chave] = str(row[col_mdc]).strip().upper()
         if col_sgf is not None and row[col_sgf] is not None:
             sg_funcao_por_chave[chave] = str(row[col_sgf]).strip().upper()
+        if col_und is not None and col_und < len(row) and row[col_und] is not None:
+            unidade_por_chave[chave] = str(row[col_und]).strip().upper()
 
         if col_sgf is not None and col_mdc is not None and col_pct is not None:
             sg = row[col_sgf]
@@ -264,6 +269,7 @@ def indexar_e_ler_dados(sheet, col_map: dict) -> tuple:
         descontos_existentes,
         md_cobranca_por_chave,
         sg_funcao_por_chave,
+        unidade_por_chave,
         medicao_por_matricula,
         medicao_records,
         obs_divergentes,

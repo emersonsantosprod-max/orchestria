@@ -26,7 +26,7 @@ def test_derivar_mes_referencia_iguala_mes_referencia_interno():
     )
     try:
         col_map = writer.mapear_colunas(sheet_ro)
-        (_i, _o, _d, _md, _sg,
+        (_i, _o, _d, _md, _sg, _und,
          medicao_por_matricula, *_rest) = writer.indexar_e_ler_dados(sheet_ro, col_map)
     finally:
         wb_ro.close()

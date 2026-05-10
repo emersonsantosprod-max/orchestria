@@ -29,7 +29,7 @@ def test_indexar_detecta_obs_divergente(tmp_path):
     _criar_medicao_divergente(caminho)
     wb, sheet = writer.carregar_planilha(caminho, read_only=True, data_only=True)
     col_map = writer.mapear_colunas(sheet)
-    (_index, _obs, _desc, _mdc, _sg, _mpm, _records,
+    (_index, _obs, _desc, _mdc, _sg, _und, _mpm, _records,
      obs_div, desc_div) = writer.indexar_e_ler_dados(sheet, col_map)
     wb.close()
 

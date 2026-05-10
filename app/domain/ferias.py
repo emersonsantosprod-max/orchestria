@@ -27,10 +27,12 @@ Erros detectados:
 """
 
 import re
+from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import date, timedelta
 
 from app.domain.core import Inconsistencia, Update, inconsistencia, normalizar_matricula
+from app.domain.normalizacao import normalizar_chave
 
 
 @dataclass(frozen=True)
@@ -109,12 +111,12 @@ def _classificar(md_cob, sg_fun, base_cobranca):
 
 def gerar_updates_ferias(
     dados_ferias,
-    base_cobranca,
-    medicao_por_matricula,
-    md_cobranca_por_chave,
-    sg_funcao_por_chave,
-    mes_referencia,
-    col_map,
+    ctx_or_base=None,
+    medicao_por_matricula=None,
+    md_cobranca_por_chave=None,
+    sg_funcao_por_chave=None,
+    mes_referencia=None,
+    col_map=None,
 ) -> tuple[list[Update], list[Inconsistencia]]:
     """
     Retorna (atualizacoes, inconsistencias).
@@ -123,9 +125,43 @@ def gerar_updates_ferias(
         - row preenchido (resolvido aqui; writer não consulta índice)
         - sobrescrever_obs=True (sempre)
         - situacao preenchida quando aplicável
+        - tag setada quando ctx.base_tags_por_chave possui entrada para
+          (sg_funcao, unidade, md_cobranca, situacao) já normalizadas;
+          ausente → vira inconsistência 'tag não mapeada' (deduplicada
+          por chave normalizada com lista de matrículas afetadas).
 
       inconsistencias: list[Inconsistencia] (origem='ferias')
+
+    A ausência de base_tags_por_chave (mapa vazio) é tratada como
+    "feature inativa": Update.tag fica None e nenhuma inconsistência
+    de tag é emitida — preserva compat enquanto a Base de Tags ainda
+    não foi cadastrada na sessão.
+
+    Compat: aceita também a forma legada posicional
+    `(dados, base_cobranca, mpm, mdc, sg, mes, col_map)`. Migração
+    aditiva — caller novo passa FeriasContext.
     """
+    if isinstance(ctx_or_base, FeriasContext):
+        ctx = ctx_or_base
+    else:
+        ctx = FeriasContext(
+            base_cobranca=ctx_or_base or {},
+            medicao_por_matricula=medicao_por_matricula or {},
+            md_cobranca_por_chave=md_cobranca_por_chave or {},
+            sg_funcao_por_chave=sg_funcao_por_chave or {},
+            mes_referencia=mes_referencia,
+            col_map=col_map or {},
+        )
+    base_cobranca = ctx.base_cobranca
+    medicao_por_matricula = ctx.medicao_por_matricula
+    md_cobranca_por_chave = ctx.md_cobranca_por_chave
+    sg_funcao_por_chave = ctx.sg_funcao_por_chave
+    unidade_por_chave = ctx.unidade_por_chave
+    base_tags_por_chave = ctx.base_tags_por_chave
+    mes_referencia = ctx.mes_referencia
+    col_map = ctx.col_map
+    tags_ativas = bool(base_tags_por_chave)
+
     faltantes = [c for c in _OBRIGATORIAS_FERIAS if c not in col_map]
     if faltantes:
         raise RuntimeError(
@@ -147,6 +183,7 @@ def gerar_updates_ferias(
 
     classificacao_cache = {}
     sg_nao_class_emitido = set()
+    tag_misses: dict[tuple, list[str]] = defaultdict(list)
 
     for r in dados_ferias:
         linha = r.get('linha', '-')
@@ -217,6 +254,16 @@ def gerar_updates_ferias(
                 situacao = SITUACAO_PADRAO
                 observacao = obs_sem_sufixo
 
+            tag_value: str | None = None
+            if tags_ativas:
+                unidade_chave = unidade_por_chave.get(chave, '')
+                tag_key = normalizar_chave(sg_fun, unidade_chave, md_cob, situacao)
+                tag_value = base_tags_por_chave.get(tag_key)
+                if tag_value is None:
+                    if matricula not in tag_misses[tag_key]:
+                        tag_misses[tag_key].append(matricula)
+                    continue
+
             for row_idx in rows:
                 atualizacoes.append(Update(
                     tipo='ferias',
@@ -225,7 +272,19 @@ def gerar_updates_ferias(
                     observacao=observacao,
                     situacao=situacao,
                     sobrescrever_obs=True,
+                    tag=tag_value,
                     row=row_idx,
                 ))
+
+    for tag_key, matriculas in tag_misses.items():
+        sg_, un_, md_, sit_ = tag_key
+        inconsistencias.append(inconsistencia(
+            origem='ferias',
+            erro=(
+                f"tag não mapeada para (sg_funcao={sg_!r}, unidade={un_!r}, "
+                f"md_cobranca={md_!r}, situacao={sit_!r}); "
+                f"{len(matriculas)} matrícula(s): {','.join(matriculas)}"
+            ),
+        ))
 
     return atualizacoes, inconsistencias
