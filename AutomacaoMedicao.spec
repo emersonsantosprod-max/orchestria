@@ -45,6 +45,15 @@ else:
         "app/ui/web/ antes de empacotar para que a SPA seja servida."
     )
 
+try:
+    import webview  # noqa: F401
+except ImportError as exc:
+    raise SystemExit(
+        "[spec] pywebview não instalado no venv de build. "
+        "Rode `pip install -e .` (ou `pip install pywebview==5.4`) antes "
+        "de empacotar — sem ele o .exe levanta ModuleNotFoundError em runtime."
+    ) from exc
+
 _uvicorn_hidden  = collect_submodules('uvicorn')
 _openpyxl_hidden = collect_submodules('openpyxl')
 _fastapi_hidden  = collect_submodules('fastapi')
@@ -65,6 +74,8 @@ a = Analysis(
         *_openpyxl_hidden,
         *_fastapi_hidden,
         *_webview_hidden,
+        'webview.platforms.edgechromium',
+        'proxy_tools',
     ],
     hookspath=[],
     hooksconfig={},
