@@ -27,9 +27,29 @@ Erros detectados:
 """
 
 import re
+from dataclasses import dataclass, field
 from datetime import date, timedelta
 
 from app.domain.core import Inconsistencia, Update, inconsistencia, normalizar_matricula
+
+
+@dataclass(frozen=True)
+class FeriasContext:
+    """Bundle imutável de fontes consumidas por gerar_updates_ferias.
+
+    Construído por pipeline.executar_pipeline (composition root) antes
+    de chamar o domínio. Reúne lookups por chave (matricula, data) e
+    lookups normalizados por chave composta (sg_funcao, unidade,
+    md_cobranca, situacao) — esta última é a chave de base_tags.
+    """
+    base_cobranca: dict
+    medicao_por_matricula: dict
+    md_cobranca_por_chave: dict
+    sg_funcao_por_chave: dict
+    unidade_por_chave: dict = field(default_factory=dict)
+    base_tags_por_chave: dict = field(default_factory=dict)
+    mes_referencia: date = None
+    col_map: dict = field(default_factory=dict)
 
 _RE_PERIODO = re.compile(
     r'(\d{2})/(\d{2})/(\d{4})\s*a\s*(\d{2})/(\d{2})/(\d{4})$'
