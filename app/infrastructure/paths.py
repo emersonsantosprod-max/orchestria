@@ -11,6 +11,7 @@ paths.py — resolução determinística de caminhos em dev e em builds PyInstal
 
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
@@ -58,6 +59,27 @@ def uploads_dir() -> Path:
     d = root / 'data' / 'uploads'
     d.mkdir(parents=True, exist_ok=True)
     return d
+
+
+def validar_arquivo_referenciado(
+    path: str | Path,
+    exts: tuple[str, ...] = ('.xlsx', '.xls'),
+) -> Path:
+    """Valida que `path` é arquivo existente, com extensão suportada e legível.
+
+    Fonte canônica de validação de path para registry e Execute. Levanta
+    FileNotFoundError, ValueError ou PermissionError com mensagens claras.
+    """
+    p = Path(path)
+    if not p.is_file():
+        raise FileNotFoundError(f'Arquivo não encontrado: {path}')
+    if p.suffix.lower() not in exts:
+        raise ValueError(
+            f'Extensão não suportada: {p.suffix} (esperado: {", ".join(exts)})'
+        )
+    if not os.access(p, os.R_OK):
+        raise PermissionError(f'Sem permissão de leitura: {path}')
+    return p
 
 
 def ui_dist_dir() -> Path:

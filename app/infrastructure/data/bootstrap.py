@@ -74,7 +74,15 @@ def _abrir_aba_frequencia(
     """
     wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
     try:
-        ws = wb['Frequencia']
+        nome = next(
+            (n for n in wb.sheetnames if n.lower() in {'frequencia', 'frequência'}),
+            None,
+        )
+        if nome is None:
+            raise ValueError(
+                "Aba 'Frequencia' não encontrada na planilha de medição."
+            )
+        ws = wb[nome]
         col_map: dict[str, int] | None = None
         header_row_idx: int = 0
         linhas_dados_scan = 0
@@ -193,6 +201,61 @@ def obter_mes_referencia_medicao(path: str | Path) -> str:
 
     ano, mes = mes_referencia_unico(_pares(), contexto="Medição")
     return f'{ano:04d}-{mes:02d}'
+
+
+def obter_mes_referencia_medicao_lite(path: str | Path) -> str:
+    """Extração lite no register-time: primeira data válida vence.
+
+    Localiza apenas a coluna 'data' na aba Frequencia (não exige header
+    completo de cobranca/funcao/pct). Não chama mes_referencia_unico
+    (premissa: medição cobre sempre um único mês). Validação estrita
+    roda em pipeline._mes_referencia no Execute como defesa em
+    profundidade.
+    """
+    with closing(openpyxl.load_workbook(path, read_only=True, data_only=True)) as wb:
+        nome = next(
+            (n for n in wb.sheetnames if n.lower() in {'frequencia', 'frequência'}),
+            None,
+        )
+        if nome is None:
+            raise PlanilhaInvalidaError(
+                "Aba 'Frequencia' não encontrada na planilha de medição."
+            )
+        ws = wb[nome]
+        col_data: int | None = None
+        header_row_idx = 0
+        rows_scan = 0
+        for row_idx, row in enumerate(ws.iter_rows(values_only=True), start=1):
+            if all(cell is None for cell in row):
+                continue
+            rows_scan += 1
+            if rows_scan > _HEADER_SCAN_ROWS:
+                break
+            for col_i, cell in enumerate(row):
+                if cell is None:
+                    continue
+                if str(cell).strip().lower() == 'data':
+                    col_data = col_i
+                    header_row_idx = row_idx
+                    break
+            if col_data is not None:
+                break
+        if col_data is None:
+            raise PlanilhaInvalidaError(
+                "Coluna 'data' não encontrada na aba Frequencia."
+            )
+        for row in ws.iter_rows(min_row=header_row_idx + 1, values_only=True):
+            if col_data >= len(row):
+                continue
+            v = row[col_data]
+            if v is None:
+                continue
+            data_str = normalizar_data(v)
+            if data_str and len(data_str) == 10:
+                ano = int(data_str[6:10])
+                mes = int(data_str[3:5])
+                return f'{ano:04d}-{mes:02d}'
+    raise PlanilhaInvalidaError('Medição sem datas válidas')
 
 
 def registrar_bd(path: str | Path, conn: sqlite3.Connection) -> None:
